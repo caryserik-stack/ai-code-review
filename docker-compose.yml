@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  # ──────────────────────────────────────────
+  # PostgreSQL База данных
+  # ──────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine        # alpine = лёгкая версия
+    container_name: ai_code_review_db
+    restart: unless-stopped          # перезапускать если упал
+    
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ai_code_review
+    
+    ports:
+      - "5433:5432"                  # host:container
+    
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # данные не теряются при перезапуске
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ──────────────────────────────────────────
+# Volumes — постоянное хранилище
+# ──────────────────────────────────────────
+volumes:
+  postgres_data:

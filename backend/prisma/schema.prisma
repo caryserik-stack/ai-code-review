@@ -1,0 +1,91 @@
+// Настройка генератора — создаёт TypeScript клиент
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Настройка БД — читает URL из .env
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────
+// USER
+// ──────────────────────────────────────────
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Связь: один User → много Review
+  reviews   Review[]
+
+  @@map("users") // имя таблицы в БД
+}
+
+// ──────────────────────────────────────────
+// REVIEW
+// ──────────────────────────────────────────
+model Review {
+  id        String       @id @default(cuid())
+  code      String       // исходный код который прислал юзер
+  language  String       // typescript, python, etc
+  status    ReviewStatus @default(PENDING)
+  summary   String?      // общее резюме от AI
+  score     Int?         // оценка качества кода 0-100
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // Связь с User (внешний ключ)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Связь: один Review → много ReviewItem
+  items     ReviewItem[]
+
+  @@map("reviews")
+}
+
+// ──────────────────────────────────────────
+// REVIEW ITEM — конкретное замечание
+// ──────────────────────────────────────────
+model ReviewItem {
+  id          String     @id @default(cuid())
+  type        ItemType   // ERROR, WARNING, SUGGESTION
+  title       String     // короткий заголовок
+  description String     // подробное объяснение
+  line        Int?       // номер строки в коде
+  suggestion  String?    // как исправить
+
+  // Связь с Review (внешний ключ)
+  reviewId    String
+  review      Review     @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("review_items")
+}
+
+// ──────────────────────────────────────────
+// ENUMS — фиксированные значения
+// ──────────────────────────────────────────
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ReviewStatus {
+  PENDING    // создан, ждёт обработки
+  PROCESSING // AI анализирует
+  COMPLETED  // готово
+  FAILED     // что-то пошло не так
+}
+
+enum ItemType {
+  ERROR       // ошибка которая сломает код
+  WARNING     // потенциальная проблема
+  SUGGESTION  // улучшение best practices
+  SECURITY    // уязвимость безопасности
+}
