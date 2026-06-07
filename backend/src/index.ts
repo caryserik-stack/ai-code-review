@@ -1,6 +1,9 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import CookieParser  from 'cookie-parser'
+import authRouter from './routes/auth.routes'
+import cookieParser from 'cookie-parser'
 
 // Загружаем переменные окружения из .env
 // Это должно быть ПЕРВЫМ — до любых других импортов
@@ -16,6 +19,7 @@ const PORT = process.env.PORT || 4000
 // Разрешаем принимать JSON в теле запроса
 // Без этого req.body будет undefined
 app.use(express.json())
+app.use(cookieParser())
 
 // CORS — разрешаем запросы с фронтенда
 // Без этого браузер блокирует запросы с другого порта
@@ -28,6 +32,8 @@ app.use(cors({
 // ROUTES
 // ──────────────────────────────────────────
 
+app.use('/api/auth', authRouter)
+
 // Health check — первый эндпоинт
 // Используется для проверки что сервер жив
 // Docker и деплой-системы пингуют этот эндпоинт
@@ -38,6 +44,7 @@ app.get('/health', (req, res) => {
     environment: process.env.NODE_ENV || 'development'
   })
 })
+
 
 // ──────────────────────────────────────────
 // ЗАПУСК СЕРВЕРА
