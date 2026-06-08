@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import authRouter from './routes/auth.routes'
 import cookieParser from 'cookie-parser'
 import reviewRouter from './routes/review.routes'
+import { errorMiddleware } from './middleware/error.middleware'
 
 // Загружаем переменные окружения из .env
 // Это должно быть ПЕРВЫМ — до любых других импортов
@@ -34,6 +35,7 @@ app.use(cors({
 
 app.use('/api/auth', authRouter)
 app.use('/api/reviews', reviewRouter)
+app.use(errorMiddleware)
 
 // Health check — первый эндпоинт
 // Используется для проверки что сервер жив

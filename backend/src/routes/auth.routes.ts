@@ -1,11 +1,13 @@
 import { Router } from 'express'
 import * as authController from '../controllers/auth.controller'
 import { authMiddleware } from '../middleware/auth.middleware'
+import { validate } from '../services/validate.middleware'
+import { registerSchema, loginSchema } from '../lib/schemas'
 
 const router = Router()
 
-router.post('/register', authController.register)
-router.post('/login', authController.login)
+router.post('/register', validate(registerSchema), authController.register)
+router.post('/login', validate(loginSchema), authController.login)
 router.post('/logout', authController.logout)
 
 router.get('/me', authMiddleware, authController.getMe)
