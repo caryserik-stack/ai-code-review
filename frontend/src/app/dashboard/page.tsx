@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
 
 // Тип для Review
 interface Review {
@@ -16,13 +17,25 @@ interface Review {
 export default function DashboardPage() {
   const router = useRouter();
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [reviewsLoading, setReviewsLoading] = useState(true)
   const [error, setError] = useState("");
+
+  const { user, fetchMe, logout, loading } = useAuthStore()
 
   // Загружаем список ревью при открытии страницы
   useEffect(() => {
-    fetchReviews();
-  }, []);
+    fetchMe();
+  }, [fetchMe]);
+
+  useEffect(() => {
+    if (!loading && user) {
+      fetchReviews();
+    }
+
+    if (!loading && !user) {
+      router.push('/login')
+    }
+  }, [user, loading])
 
   const fetchReviews = async () => {
     try {
@@ -30,26 +43,17 @@ export default function DashboardPage() {
         credentials: "include",
       });
 
-      // Не авторизован → на логин
-      if (response.status === 401) {
-        router.push("/login");
-        return;
-      }
-
       const data = await response.json();
       setReviews(data.reviews);
     } catch (err) {
       setError("Failed to load reviews");
     } finally {
-      setLoading(false);
+      setReviewsLoading(false)
     }
   };
 
   const handleLogout = async () => {
-    await fetch("http://localhost:4000/api/auth/logout", {
-      method: "POST",
-      credentials: "include",
-    });
+    await logout()
     router.push("/login");
   };
 
@@ -74,7 +78,7 @@ export default function DashboardPage() {
     return "text-red-600";
   };
 
-  if (loading) {
+  if (loading || reviewsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-500">Loading...</p>
