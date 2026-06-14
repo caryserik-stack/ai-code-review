@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { reviewApi } from '@/lib/apiClient'
 
 const LANGUAGES = [
   'typescript', 'javascript', 'python',
@@ -21,20 +22,7 @@ export default function NewReviewPage() {
     setError('')
 
     try {
-      const response = await fetch('http://localhost:4000/api/reviews', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ code, language }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || 'Something went wrong')
-        return
-      }
-
+      const data = await reviewApi.create({ code, language })
       // Успех → на страницу результата
       router.push(`/review/${data.review.id}`)
 

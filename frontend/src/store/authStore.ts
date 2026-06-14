@@ -1,12 +1,11 @@
 import { create } from 'zustand'
-
+import { authApi } from '@/lib/apiClient'
 
 interface User {
   id: string
   email: string
   name: string | null
   role: string
-  createdAt: string
 }
 
 interface AuthStore {
@@ -20,40 +19,21 @@ interface AuthStore {
 export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   loading: true,
-  
 
   setUser: (user) => set({ user }),
 
-
   fetchMe: async () => {
-    set ({ loading: true})
+    set({ loading: true })
     try {
-      const response = await fetch('http://localhost:4000/api/auth/me', {
-        credentials: 'include',
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        set({ user: data.user, loading: false })
-      } else {
-        set({ user: null, loading: false })
-      }
+      const data = await authApi.me()
+      set({ user: data.user, loading: false })
     } catch {
       set({ user: null, loading: false })
     }
   },
 
-
   logout: async () => {
-    await fetch('http://localhost:4000/api/auth/logout', {
-      method: "POST",
-      credentials: "include",
-    })
+    await authApi.logout()
     set({ user: null })
-  }
-
-
-
-
-
+  },
 }))
