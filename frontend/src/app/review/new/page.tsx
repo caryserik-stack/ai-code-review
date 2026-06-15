@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { reviewApi } from "@/lib/apiClient";
+import { createReviewSchema, MAX_CODE_LENGTH } from "@/lib/validation/review";
 
 const LANGUAGES = [
   "typescript",
@@ -23,17 +24,22 @@ export default function NewReviewPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const MAX_CODE_LENGTH = 10000;
   const isTooLong = code.length > MAX_CODE_LENGTH;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
 
+    const result = createReviewSchema.safeParse({ code, language });
+    if (!result.success) {
+      setError(result.error.issues[0].message);
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      const data = await reviewApi.create({ code, language });
-      // Успех → на страницу результата
+      const data = await reviewApi.create(result.data);
       router.push(`/review/${data.review.id}`);
     } catch (err) {
       setError(

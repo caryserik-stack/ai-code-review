@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/apiClient";
+import { registerSchema } from "@/lib/validation/auth";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -15,11 +16,18 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
 
+    const result = registerSchema.safeParse({ name, email, password });
+    if (!result.success) {
+      setError(result.error.issues[0].message);
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      await authApi.register({ name, email, password });
+      await authApi.register(result.data);
       router.push("/dashboard");
     } catch (err) {
       setError(
