@@ -14,16 +14,11 @@ const request = async (endpoint: string, options: RequestInit = {}) => {
 
   const data = response.status !== 204 ? await response.json(): {}
 
-  if (response.status === 401) {
-    window.location.href = '/login'
-    throw new Error('Unauthorized')
-  }
-
-
   if (!response.ok) {
-    throw new Error(data.error || 'Something went wrong')
+    const error = new Error(data.error || 'Something went wrong') as Error & { status: number }
+    error.status = response.status
+    throw error
   }
-
   return data
 }
 

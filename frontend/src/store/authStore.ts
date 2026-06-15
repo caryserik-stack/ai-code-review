@@ -1,19 +1,19 @@
-import { create } from 'zustand'
-import { authApi } from '@/lib/apiClient'
+import { create } from "zustand";
+import { authApi } from "@/lib/apiClient";
 
 interface User {
-  id: string
-  email: string
-  name: string | null
-  role: string
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
 }
 
 interface AuthStore {
-  user: User | null
-  loading: boolean
-  setUser: (user: User | null) => void
-  fetchMe: () => Promise<void>
-  logout: () => Promise<void>
+  user: User | null;
+  loading: boolean;
+  setUser: (user: User | null) => void;
+  fetchMe: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
@@ -23,17 +23,20 @@ export const useAuthStore = create<AuthStore>((set) => ({
   setUser: (user) => set({ user }),
 
   fetchMe: async () => {
-    set({ loading: true })
+    set({ loading: true });
     try {
-      const data = await authApi.me()
-      set({ user: data.user, loading: false })
+      const data = await authApi.me();
+      set({ user: data.user, loading: false });
     } catch {
-      set({ user: null, loading: false })
+      set({ user: null, loading: false });
     }
   },
 
   logout: async () => {
-    await authApi.logout()
-    set({ user: null })
+    try {
+      await authApi.logout();
+    } finally {
+      set({ user: null });
+    }
   },
-}))
+}));

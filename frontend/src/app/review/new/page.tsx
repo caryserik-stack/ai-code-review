@@ -1,47 +1,57 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { reviewApi } from '@/lib/apiClient'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { reviewApi } from "@/lib/apiClient";
 
 const LANGUAGES = [
-  'typescript', 'javascript', 'python',
-  'java', 'go', 'rust', 'cpp', 'css', 'html'
-]
+  "typescript",
+  "javascript",
+  "python",
+  "java",
+  "go",
+  "rust",
+  "cpp",
+  "css",
+  "html",
+];
 
 export default function NewReviewPage() {
-  const router = useRouter()
-  const [code, setCode] = useState('')
-  const [language, setLanguage] = useState('typescript')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const router = useRouter();
+  const [code, setCode] = useState("");
+  const [language, setLanguage] = useState("typescript");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const MAX_CODE_LENGTH = 10000;
+  const isTooLong = code.length > MAX_CODE_LENGTH;
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
-      const data = await reviewApi.create({ code, language })
+      const data = await reviewApi.create({ code, language });
       // Успех → на страницу результата
-      router.push(`/review/${data.review.id}`)
-
+      router.push(`/review/${data.review.id}`);
     } catch (err) {
-      setError('Network error. Please try again.')
+      setError(
+        err instanceof Error ? err.message : "Network error. Please try again.",
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
-
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold text-gray-900">AI Code Review</h1>
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push("/dashboard")}
             className="text-gray-500 text-sm hover:text-gray-700"
           >
             ← Back to Dashboard
@@ -59,7 +69,6 @@ export default function NewReviewPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-
           {/* Выбор языка */}
           <div className="bg-white p-4 rounded-xl border border-gray-200">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -70,8 +79,10 @@ export default function NewReviewPage() {
               onChange={(e) => setLanguage(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {LANGUAGES.map(lang => (
-                <option key={lang} value={lang}>{lang}</option>
+              {LANGUAGES.map((lang) => (
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
               ))}
             </select>
           </div>
@@ -88,21 +99,21 @@ export default function NewReviewPage() {
               placeholder="Paste your code here..."
               required
             />
-            <p className="text-xs text-gray-400 mt-1">
-              {code.length} / 10000 characters
+            <p className={`text-xs mt-1 ${isTooLong ? 'text-red-500 font-medium': 'text-gray-400'}`}>
+              {code.length} / {MAX_CODE_LENGTH} characters
+              {isTooLong && '- Too Long 🚫'}
             </p>
           </div>
 
           <button
             type="submit"
-            disabled={loading || code.length === 0}
+            disabled={loading || code.length === 0 || isTooLong}
             className="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
-            {loading ? '🤖 Analyzing...' : '🚀 Analyze Code'}
+            {loading ? "🤖 Analyzing..." : "🚀 Analyze Code"}
           </button>
-
         </form>
       </main>
     </div>
-  )
+  );
 }

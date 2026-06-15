@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { reviewApi } from "@/lib/apiClient";
 
 interface ReviewItem {
   id: string;
@@ -31,22 +32,15 @@ export default function ReviewPage() {
 
   useEffect(() => {
     fetchReview();
-  }, []);
+  }, [params.id]);
 
   const fetchReview = async () => {
+    setLoading(true);
     try {
-      const response = await fetch(
-        `http://localhost:4000/api/reviews/${params.id}`,
-        { credentials: "include" },
-      );
-
-      if (response.status === 401) {
-        router.push("/login");
-        return;
-      }
-
-      const data = await response.json();
+      const data = await reviewApi.getById(params.id as string);
       setReview(data.review);
+    } catch (err) {
+      setReview(null);
     } finally {
       setLoading(false);
     }

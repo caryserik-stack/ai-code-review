@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from 'next/link';
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
+import { reviewApi } from "@/lib/apiClient";
 
 // Тип для Review
 interface Review {
@@ -39,12 +41,8 @@ export default function DashboardPage() {
 
   const fetchReviews = async () => {
     try {
-      const response = await fetch("http://localhost:4000/api/reviews", {
-        credentials: "include",
-      });
-
-      const data = await response.json();
-      setReviews(data.reviews);
+      const data = await reviewApi.getAll();
+      setReviews(data.reviews ?? []);
     } catch (err) {
       setError("Failed to load reviews");
     } finally {
@@ -134,10 +132,10 @@ export default function DashboardPage() {
           // Список ревью
           <div className="space-y-3">
             {reviews.map((review) => (
-              <div
+              <Link
                 key={review.id}
-                onClick={() => router.push(`/review/${review.id}`)}
-                className="bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-300 cursor-pointer transition-colors"
+                href={`/review/${review.id}`}
+                className="block bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-300 cursor-pointer transition-colors"
               >
                 <div className="flex justify-between items-start">
                   <div>
@@ -168,7 +166,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-gray-400 mt-2">
                   {new Date(review.createdAt).toLocaleDateString()}
                 </p>
-              </div>
+              </Link>
             ))}
           </div>
         )}
