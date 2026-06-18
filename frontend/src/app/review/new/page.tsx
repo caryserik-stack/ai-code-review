@@ -51,14 +51,16 @@ export default function NewReviewPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-surface-dark">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white dark:bg-card-dark border-b border-gray-200 dark:border-border-dark">
         <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-900">AI Code Review</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            AI Code Review
+          </h1>
           <button
             onClick={() => router.push("/dashboard")}
-            className="text-gray-500 text-sm hover:text-gray-700"
+            className="text-gray-500 dark:text-gray-400 text-sm hover:text-gray-700 dark:hover:text-gray-200"
           >
             ← Back to Dashboard
           </button>
@@ -66,24 +68,26 @@ export default function NewReviewPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">New Review</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+          New Review
+        </h2>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
+          <div className="bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 p-3 rounded-lg mb-4 text-sm">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Выбор языка */}
-          <div className="bg-white p-4 rounded-xl border border-gray-200">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="bg-white dark:bg-card-dark p-4 rounded-xl border border-gray-200 dark:border-border-dark">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Language
             </label>
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 dark:border-border-dark dark:bg-surface-dark dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {LANGUAGES.map((lang) => (
                 <option key={lang} value={lang}>
@@ -94,20 +98,22 @@ export default function NewReviewPage() {
           </div>
 
           {/* Код */}
-          <div className="bg-white p-4 rounded-xl border border-gray-200">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="bg-white dark:bg-card-dark p-4 rounded-xl border border-gray-200 dark:border-border-dark">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Your Code
             </label>
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="w-full h-64 font-mono text-sm border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full h-64 font-mono text-sm border border-gray-300 dark:border-border-dark dark:bg-surface-dark dark:text-gray-100 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               placeholder="Paste your code here..."
               required
             />
-            <p className={`text-xs mt-1 ${isTooLong ? 'text-red-500 font-medium': 'text-gray-400'}`}>
+            <p
+              className={`text-xs mt-1 ${isTooLong ? "text-red-500 dark:text-red-400 font-medium" : "text-gray-400 dark:text-gray-500"}`}
+            >
               {code.length} / {MAX_CODE_LENGTH} characters
-              {isTooLong && '- Too Long 🚫'}
+              {isTooLong && "- Too Long 🚫"}
             </p>
           </div>
 
