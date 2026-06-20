@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const PROTECTED_PATHS = ['/dashboard', '/review']
+const PROTECTED_PATHS = ['/review']
 
 const AUTH_PATHS = ['/login', '/register']
 
@@ -19,7 +19,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (isAuthRoute && token) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    return NextResponse.redirect(new URL('/review/new', request.url))
   }
 
   return NextResponse.next()
@@ -27,5 +27,5 @@ export function middleware(request: NextRequest) {
 
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/review/:path*', '/login', '/register'],
+  matcher: ['/review/:path*', '/login', '/register'],
 }

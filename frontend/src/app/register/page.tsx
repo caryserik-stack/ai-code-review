@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/apiClient";
 import { registerSchema } from "@/lib/validation/auth";
+import { ArrowLeft } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function RegisterPage() {
 
     try {
       await authApi.register(result.data);
-      router.push("/dashboard");
+      router.push("/review/new");
     } catch (err) {
       setError(
         err instanceof Error
@@ -41,7 +42,15 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-surface-dark flex items-center justify-center">
+    <div className="min-h-screen bg-gray-50 dark:bg-surface-dark flex items-center justify-center relative">
+      <Link
+        href="/"
+        className="absolute top-6 left-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+      >
+        <ArrowLeft size={16} />
+        Home
+      </Link>
+
       <div className="bg-white dark:bg-card-dark p-8 rounded-xl shadow-md w-full max-w-md">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
           Create account
@@ -59,12 +68,12 @@ export default function RegisterPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email
+              Name
             </label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               className="w-full border border-gray-300 dark:border-border-dark dark:bg-surface-dark dark:text-gray-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="you@example.com"
               required
@@ -110,7 +119,10 @@ export default function RegisterPage() {
 
         <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
           Already have an account?{" "}
-          <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:underline">
+          <Link
+            href="/login"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
             Sign in
           </Link>
         </p>

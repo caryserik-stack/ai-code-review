@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { authApi } from "@/lib/apiClient";
 import { loginSchema } from "@/lib/validation/auth";
+import { ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function LoginPage() {
 
     try {
       await authApi.login(result.data);
-      router.push("/dashboard");
+      router.push("/review/new");
     } catch (err) {
       setError(
         err instanceof Error
@@ -40,7 +41,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-surface-dark flex items-center justify-center">
+    <div className="min-h-screen bg-gray-50 dark:bg-surface-dark flex items-center justify-center relative">
+      <Link
+        href="/"
+        className="absolute top-6 left-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+      >
+        <ArrowLeft size={16} />
+        Home
+      </Link>
+
       <div className="bg-white dark:bg-card-dark p-8 rounded-xl shadow-md w-full max-w-md">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
           Welcome back
@@ -95,7 +104,10 @@ export default function LoginPage() {
 
         <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-blue-600 dark:text-blue-400 hover:underline">
+          <Link
+            href="/register"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
             Sign up
           </Link>
         </p>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { reviewApi } from "@/lib/apiClient";
+import { useReviewsStore } from "@/store/reviewsStore";
 import { createReviewSchema, MAX_CODE_LENGTH } from "@/lib/validation/review";
 
 const LANGUAGES = [
@@ -23,6 +24,7 @@ export default function NewReviewPage() {
   const [language, setLanguage] = useState("typescript");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const addReview = useReviewsStore((state) => state.addReview);
 
   const isTooLong = code.length > MAX_CODE_LENGTH;
 
@@ -40,6 +42,11 @@ export default function NewReviewPage() {
 
     try {
       const data = await reviewApi.create(result.data);
+      addReview({
+        id: data.review.id,
+        language: data.review.language,
+        createdAt: data.review.createdAt,
+      });
       router.push(`/review/${data.review.id}`);
     } catch (err) {
       setError(
@@ -52,21 +59,6 @@ export default function NewReviewPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-surface-dark">
-      {/* Header */}
-      <header className="bg-white dark:bg-card-dark border-b border-gray-200 dark:border-border-dark">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            AI Code Review
-          </h1>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="text-gray-500 dark:text-gray-400 text-sm hover:text-gray-700 dark:hover:text-gray-200"
-          >
-            ← Back to Dashboard
-          </button>
-        </div>
-      </header>
-
       <main className="max-w-5xl mx-auto px-4 py-8">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
           New Review

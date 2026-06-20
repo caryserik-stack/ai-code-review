@@ -47,7 +47,7 @@ export const authApi = {
 
 
 
-export const reviewApi = {
+export const  reviewApi = {
   create: (data: { code: string; language: string }) => 
     request('reviews', {
       method: 'POST',

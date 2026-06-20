@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { reviewApi } from "@/lib/apiClient";
 
 interface ReviewItem {
@@ -25,7 +25,6 @@ interface Review {
 }
 
 export default function ReviewPage() {
-  const router = useRouter();
   const params = useParams();
   const [review, setReview] = useState<Review | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,21 +102,6 @@ export default function ReviewPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-surface-dark">
-      {/* Header */}
-      <header className="bg-white dark:bg-card-dark border-b border-gray-200 dark:border-border-dark">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            AI Code Review
-          </h1>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="text-gray-500 dark:text-gray-400 text-sm hover:text-gray-700 dark:hover:text-gray-200"
-          >
-            ← Back to Dashboard
-          </button>
-        </div>
-      </header>
-
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-6">
         {/* Score карточка */}
         <div className="bg-white dark:bg-card-dark p-6 rounded-xl border border-gray-200 dark:border-border-dark">
