@@ -6,6 +6,7 @@ import Link from "next/link";
 import { authApi } from "@/lib/apiClient";
 import { loginSchema } from "@/lib/validation/auth";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner"
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function LoginPage() {
 
     try {
       await authApi.login(result.data);
+      toast.success("Welcome back!");
       router.push("/review/new");
     } catch (err) {
       setError(

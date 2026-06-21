@@ -54,3 +54,21 @@ export const getReviewById = async (req: AuthRequest, res: Response): Promise<vo
     res.status(500).json({ error: 'Internal server error' })
   }
 }
+
+
+export const deleteReview = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params
+
+    await reviewService.deleteReview(id, req.userId!)
+
+    res.status(200).send()
+
+  } catch(error: any) {
+    if (error.message === 'REVIEW_NOT_FOUND') {
+      res.status(404).json({ error: 'Review not found' })
+      return
+    }
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}

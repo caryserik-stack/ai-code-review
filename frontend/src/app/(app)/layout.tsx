@@ -6,14 +6,17 @@ import { useAuthStore } from "@/store/authStore";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useReviewsStore } from "@/store/reviewsStore";
 import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { reviewApi } from "@/lib/apiClient";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, loading, fetchMe } = useAuthStore();
-  const { reviews, fetchReviews } = useReviewsStore();
   const [isOpen, setIsOpen] = useState(false);
+
+  const { reviews, fetchReviews, removeReview } = useReviewsStore();
 
   useEffect(() => {
     fetchMe();
@@ -28,6 +31,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     await logout();
     router.push("/login");
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!window.confirm("Delete this review?")) return;
+
+    try {
+      await reviewApi.delete(id);
+      removeReview(id);
+      toast.success("Review deleted");
+      if (pathname === `/review/${id}`) {
+        router.push("/review/new");
+      }
+    } catch {
+      toast.error("Failed to delete review");
+    }
   };
 
   return (
@@ -78,14 +99,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={review.id}
                   href={`/review/${review.id}`}
-                  className={`block px-3 py-2 rounded-lg text-sm mb-1 truncate transition-colors ${
+                  className={`group flex items-center justify-between px-3 py-2 rounded-lg text-sm mb-1 transition-colors ${
                     isActive
                       ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
                       : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-surface-dark"
                   }`}
                 >
-                  {review.language} ·{" "}
-                  {new Date(review.createdAt).toLocaleDateString()}
+                  <span className="truncate">
+                    {review.language} ·{" "}
+                    {new Date(review.createdAt).toLocaleDateString()}
+                  </span>
+                  <button
+                    onClick={(e) => handleDelete(e, review.id)}
+                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-opacity flex-shrink-0 ml-2"
+                    aria-label="Delete review"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </Link>
               );
             })}

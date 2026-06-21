@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { reviewApi } from "@/lib/apiClient";
 import { useReviewsStore } from "@/store/reviewsStore";
 import { createReviewSchema, MAX_CODE_LENGTH } from "@/lib/validation/review";
+import { toast } from "sonner";
 
 const LANGUAGES = [
   "typescript",
@@ -47,6 +48,7 @@ export default function NewReviewPage() {
         language: data.review.language,
         createdAt: data.review.createdAt,
       });
+      toast.success("Review created");
       router.push(`/review/${data.review.id}`);
     } catch (err) {
       setError(

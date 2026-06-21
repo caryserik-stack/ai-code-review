@@ -9,5 +9,6 @@ const router = Router()
 router.post('/', authMiddleware, validate(createReviewSchema), reviewController.createReview)
 router.get('/', authMiddleware, reviewController.getReviews)
 router.get('/:id', authMiddleware, reviewController.getReviewById)
+router.delete('/:id', authMiddleware, reviewController.deleteReview)
 
 export default router

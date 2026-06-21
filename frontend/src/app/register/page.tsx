@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/apiClient";
 import { registerSchema } from "@/lib/validation/auth";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner"
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -29,6 +30,7 @@ export default function RegisterPage() {
 
     try {
       await authApi.register(result.data);
+      toast.success("Account created!");
       router.push("/review/new");
     } catch (err) {
       setError(

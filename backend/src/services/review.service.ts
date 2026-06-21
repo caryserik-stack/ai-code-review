@@ -83,3 +83,22 @@ export const getReviewById = async (id: string, userId: string) => {
 
   return review
 }
+
+
+// ──────────────────────
+// УДАЛИТЬ РЕВЬЮ
+// ──────────────────────
+
+export const deleteReview = async (id: string, userId: string) => {
+  const review = await prisma.review.findFirst({
+    where: { id, userId}
+  })
+
+  if (!review) {
+    throw new Error('REVIEW_NOT_FOUND')
+  }
+
+  await prisma.review.delete({
+    where: { id }
+  })
+}

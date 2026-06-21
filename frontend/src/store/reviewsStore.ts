@@ -12,6 +12,7 @@ interface ReviewsStore {
   loaded: boolean;
   fetchReviews: () => Promise<void>;
   addReview: (review: ReviewListItem) => void;
+  removeReview: (id: string) => void;
 }
 
 export const useReviewsStore = create<ReviewsStore>((set) => ({
@@ -30,4 +31,8 @@ export const useReviewsStore = create<ReviewsStore>((set) => ({
   addReview: (review) => {
     set((state) => ({ reviews: [review, ...state.reviews] }));
   },
+
+  removeReview: (id: string) => {
+    set((state) => ({ reviews: state.reviews.filter((r) => r.id !== id) }));
+  }
 }));
