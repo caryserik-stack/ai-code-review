@@ -41,6 +41,18 @@ export const authApi = {
   logout: () => request("auth/logout", { method: "POST" }),
 
   me: () => request("auth/me"),
+
+  updateProfile: (data: { name?: string; email?: string }) =>
+    request("auth/me", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    request("auth/me/password", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
 };
 
 export const reviewApi = {

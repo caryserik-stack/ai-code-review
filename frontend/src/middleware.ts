@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const PROTECTED_PATHS = ['/review']
+const PROTECTED_PATHS = ['/review', '/profile']
 
 const AUTH_PATHS = ['/login', '/register']
 

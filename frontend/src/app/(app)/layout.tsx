@@ -122,10 +122,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {user && (
-          <div className="p-3 border-t border-gray-200 dark:border-border-dark">
+          <div className="p-3 border-t border-gray-200 dark:border-border-dark space-y-1">
+            <Link
+              href="/profile"
+              onClick={() => setIsOpen(false)}
+              className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
+                pathname === "/profile"
+                  ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-surface-dark"
+              }`}
+            >
+              Profile
+            </Link>
             <button
               onClick={handleLogout}
-              className="w-full text-left text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-2"
+              className="w-full text-left text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-surface-dark transition-colors"
             >
               Logout
             </button>
