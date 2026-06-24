@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { Menu, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { reviewApi } from "@/lib/apiClient";
+import { SidebarSkeleton } from "@/components/skeletons/SidebarSkeleton";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -85,20 +86,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <nav className="flex-1 overflow-y-auto px-2">
+        <nav className="flex-1 overflow-y-auto px-2 py-1">
+          {loading && <SidebarSkeleton />}
+
           {!loading && !user && (
             <p className="text-sm text-gray-400 dark:text-gray-500 text-center mt-8 px-4">
               Sign in to see your reviews
             </p>
           )}
 
-          {user &&
+          {!loading && user && reviews.length === 0 && (
+            <p className="text-sm text-gray-400 dark:text-gray-500 text-center mt-8 px-4">
+              No reviews yet
+            </p>
+          )}
+
+          {!loading &&
+            user &&
             reviews.map((review) => {
               const isActive = pathname === `/review/${review.id}`;
               return (
                 <Link
                   key={review.id}
                   href={`/review/${review.id}`}
+                  onClick={() => setIsOpen(false)}
                   className={`group flex items-center justify-between px-3 py-2 rounded-lg text-sm mb-1 transition-colors ${
                     isActive
                       ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"

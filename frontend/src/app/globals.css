@@ -9,3 +9,8 @@
   --color-card-dark: #262626;
   --color-border-dark: #303030;
 }
+
+@keyframes skeleton-shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}

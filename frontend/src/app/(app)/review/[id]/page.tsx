@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { reviewApi } from "@/lib/apiClient";
+import { ReviewSkeleton } from "@/components/skeletons/ReviewSkeleton";
 
 interface ReviewItem {
   id: string;
@@ -86,8 +87,8 @@ export default function ReviewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-surface-dark">
-        <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-surface-dark">
+        <ReviewSkeleton />
       </div>
     );
   }
