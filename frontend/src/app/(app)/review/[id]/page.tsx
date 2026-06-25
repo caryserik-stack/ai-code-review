@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { reviewApi } from "@/lib/apiClient";
 import { ReviewSkeleton } from "@/components/skeletons/ReviewSkeleton";
+import { CodeBlock } from "@/components/CodeBlock";
 
 interface ReviewItem {
   id: string;
@@ -46,6 +47,28 @@ export default function ReviewPage() {
     }
   };
 
+  useEffect(() => {
+    if (!review) return;
+    if (review.status !== "PROCESSING" && review.status !== "PENDING") return;
+
+    const interval = setInterval(async () => {
+      try {
+        const data = await reviewApi.getById(params.id as string);
+        setReview(data.review);
+        if (
+          data.review.status === "COMPLETED" ||
+          data.review.status === "FAILED"
+        ) {
+          clearInterval(interval);
+        }
+      } catch {
+        clearInterval(interval);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [review?.status, params.id]);
+
   // Цвет и иконка для типа замечания
   const getItemStyle = (type: string) => {
     switch (type) {
@@ -85,10 +108,27 @@ export default function ReviewPage() {
     return "text-red-600 dark:text-red-400";
   };
 
-  if (loading) {
+  
+  if (!review) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-surface-dark">
-        <ReviewSkeleton />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-surface-dark">
+        <p className="text-gray-500 dark:text-gray-400">Review not found</p>
+      </div>
+    );
+  }
+
+  if (review.status === "PROCESSING" || review.status === "PENDING") {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-surface-dark">
+        <div className="flex items-center gap-3">
+          <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-700 dark:text-gray-300 font-medium">
+            AI is analyzing your code...
+          </p>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          This usually takes 10–30 seconds
+        </p>
       </div>
     );
   }
@@ -195,9 +235,7 @@ export default function ReviewPage() {
           <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
             Source Code
           </h2>
-          <pre className="bg-gray-50 dark:bg-surface-dark p-3 rounded-lg text-xs font-mono overflow-x-auto text-gray-800 dark:text-gray-200">
-            {review.code}
-          </pre>
+          <CodeBlock code={review.code} language={review.language} />
         </div>
       </main>
     </div>

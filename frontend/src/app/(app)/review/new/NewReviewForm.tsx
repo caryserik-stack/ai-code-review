@@ -75,20 +75,25 @@ export default function NewReviewForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Выбор языка */}
           <div className="bg-white dark:bg-card-dark p-4 rounded-xl border border-gray-200 dark:border-border-dark">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               Language
             </label>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="border border-gray-300 dark:border-border-dark dark:bg-surface-dark dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
+            <div className="flex flex-wrap gap-2">
               {LANGUAGES.map((lang) => (
-                <option key={lang} value={lang}>
+                <button
+                  key={lang}
+                  type="button"
+                  onClick={() => setLanguage(lang)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    language === lang
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-border-dark"
+                  }`}
+                >
                   {lang}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           {/* Код */}

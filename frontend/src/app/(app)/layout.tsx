@@ -6,7 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useReviewsStore } from "@/store/reviewsStore";
 import { useEffect, useState } from "react";
-import { Menu, X, Trash2 } from "lucide-react";
+import { Menu, X, Trash2, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { reviewApi } from "@/lib/apiClient";
 import { SidebarSkeleton } from "@/components/skeletons/SidebarSkeleton";
@@ -16,6 +16,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, logout, loading, fetchMe } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
   const { reviews, fetchReviews, removeReview } = useReviewsStore();
 
@@ -51,6 +53,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       toast.error("Failed to delete review");
     }
   };
+
+  const filteredReviews = reviews
+    .filter((r) => r.language.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      const diff =
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return sortOrder === "newest" ? diff : -diff;
+    });
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-surface-dark relative">
@@ -89,6 +99,40 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 overflow-y-auto px-2 py-1">
           {loading && <SidebarSkeleton />}
 
+          {!loading && user && reviews.length > 0 && (
+            <div className="mb-2 px-1 space-y-1.5">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search reviews..."
+                className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-border-dark bg-gray-50 dark:bg-surface-dark text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setSortOrder("newest")}
+                  className={`flex-1 text-xs py-1 rounded-lg transition-colors ${
+                    sortOrder === "newest"
+                      ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
+                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-surface-dark"
+                  }`}
+                >
+                  Newest
+                </button>
+                <button
+                  onClick={() => setSortOrder("oldest")}
+                  className={`flex-1 text-xs py-1 rounded-lg transition-colors ${
+                    sortOrder === "oldest"
+                      ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
+                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-surface-dark"
+                  }`}
+                >
+                  Oldest
+                </button>
+              </div>
+            </div>
+          )}
+
           {!loading && !user && (
             <p className="text-sm text-gray-400 dark:text-gray-500 text-center mt-8 px-4">
               Sign in to see your reviews
@@ -103,7 +147,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           {!loading &&
             user &&
-            reviews.map((review) => {
+            reviews.length > 0 &&
+            filteredReviews.length === 0 && (
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center mt-8 px-4">
+                No reviews found for &quot;{search}&quot;
+              </p>
+            )}
+
+          {!loading &&
+            user &&
+            filteredReviews.map((review) => {
               const isActive = pathname === `/review/${review.id}`;
               return (
                 <Link
@@ -137,18 +190,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Link
               href="/profile"
               onClick={() => setIsOpen(false)}
-              className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                 pathname === "/profile"
                   ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-surface-dark"
               }`}
             >
-              Profile
+              <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-700 dark:text-blue-300 text-xs font-bold flex-shrink-0">
+                {user?.name?.[0]?.toUpperCase() ??
+                  user?.email?.[0]?.toUpperCase() ??
+                  "?"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">
+                  {user?.name ?? "No name"}
+                </p>
+                <p className="text-xs truncate text-gray-400 dark:text-gray-500">
+                  {user?.email}
+                </p>
+              </div>
             </Link>
+
             <button
               onClick={handleLogout}
-              className="w-full text-left text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-surface-dark transition-colors"
+              className="w-full flex items-center gap-2 text-left text-sm text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
             >
+              <LogOut size={15} />
               Logout
             </button>
           </div>
