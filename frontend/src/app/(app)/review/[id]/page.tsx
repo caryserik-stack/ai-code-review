@@ -108,7 +108,14 @@ export default function ReviewPage() {
     return "text-red-600 dark:text-red-400";
   };
 
-  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-surface-dark">
+        <ReviewSkeleton />
+      </div>
+    );
+  }
+
   if (!review) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-surface-dark">
@@ -129,14 +136,6 @@ export default function ReviewPage() {
         <p className="text-sm text-gray-500 dark:text-gray-400">
           This usually takes 10–30 seconds
         </p>
-      </div>
-    );
-  }
-
-  if (!review) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-surface-dark">
-        <p className="text-gray-500 dark:text-gray-400">Review not found</p>
       </div>
     );
   }
