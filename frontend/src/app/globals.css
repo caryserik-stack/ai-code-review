@@ -14,3 +14,13 @@
   0% { background-position: -400px 0; }
   100% { background-position: 400px 0; }
 }
+
+
+html {
+  overflow-y: scroll;
+  scrollbar-width: none; /* Firefox */
+}
+
+html::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}

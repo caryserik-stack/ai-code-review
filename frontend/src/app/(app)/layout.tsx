@@ -10,6 +10,7 @@ import { Menu, X, Trash2, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { reviewApi } from "@/lib/apiClient";
 import { SidebarSkeleton } from "@/components/skeletons/SidebarSkeleton";
+import { PageTransition } from "@/components/PageTransition";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -231,7 +232,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <Menu size={18} />
         </button>
       )}
-      <main className="flex-1 overflow-y-auto pt-16">{children}</main>
+      <main className="flex-1 overflow-y-auto pt-16">
+        <PageTransition>{children}</PageTransition>
+      </main>
     </div>
   );
 }

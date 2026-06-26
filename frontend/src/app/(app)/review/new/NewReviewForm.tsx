@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { reviewApi } from "@/lib/apiClient";
 import { useReviewsStore } from "@/store/reviewsStore";
@@ -58,6 +58,18 @@ export default function NewReviewForm() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        if (code.length > 0 && !loading && !isTooLong) {
+          handleSubmit(e as unknown as React.FormEvent);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [code, loading, isTooLong]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-surface-dark">
@@ -119,9 +131,14 @@ export default function NewReviewForm() {
           <button
             type="submit"
             disabled={loading || code.length === 0 || isTooLong}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
           >
-            {loading ? "🤖 Analyzing..." : "🚀 Analyze Code"}
+            <span>{loading ? "🤖 Analyzing..." : "🚀 Analyze Code"}</span>
+            {!loading && (
+              <span className="text-xs opacity-60 hidden sm:inline">
+                Ctrl+Enter
+              </span>
+            )}
           </button>
         </form>
       </main>
