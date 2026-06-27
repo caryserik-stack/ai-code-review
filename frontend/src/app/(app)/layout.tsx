@@ -87,13 +87,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         {user && (
-          <div className="p-3">
+          <div className="p-3 space-y-2">
             <Link
               href="/review/new"
+              onClick={() => setIsOpen(false)}
               className="block w-full text-center bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
             >
               + New Review
             </Link>
+            {reviews.length > 0 && (
+              <p className="text-xs text-center text-gray-400 dark:text-gray-500">
+                {reviews.length} {reviews.length === 1 ? "review" : "reviews"}
+              </p>
+            )}
           </div>
         )}
 

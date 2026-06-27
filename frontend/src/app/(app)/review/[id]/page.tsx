@@ -74,27 +74,27 @@ export default function ReviewPage() {
     switch (type) {
       case "ERROR":
         return {
-          bg: "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-900",
+          border: "border-l-red-500",
           badge: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300",
           icon: "🔴",
         };
       case "WARNING":
         return {
-          bg: "bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-900",
+          border: "border-l-yellow-500",
           badge:
             "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300",
           icon: "🟡",
         };
       case "SECURITY":
         return {
-          bg: "bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-900",
+          border: "border-l-purple-500",
           badge:
             "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300",
           icon: "🔒",
         };
       default:
         return {
-          bg: "bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-900",
+          border: "border-l-blue-500",
           badge:
             "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
           icon: "💡",
@@ -187,7 +187,7 @@ export default function ReviewPage() {
                 return (
                   <div
                     key={item.id}
-                    className={`p-4 rounded-xl border ${style.bg}`}
+                    className={`p-4 rounded-xl border border-l-4 ${style.border} bg-white dark:bg-card-dark border-gray-200 dark:border-border-dark`}
                   >
                     <div className="flex items-start gap-3">
                       <span>{style.icon}</span>
