@@ -53,6 +53,25 @@ export const authApi = {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
+
+  forgotPassword: (data: { email: string }) =>
+    request("auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  resetPassword: (data: { token: string; newPassword: string }) =>
+    request("auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+
+  verifyResetCode: (data: { email: string; code: string }) =>
+    request("auth/verify-reset-code", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
 };
 
 export const reviewApi = {

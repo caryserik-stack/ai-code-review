@@ -102,6 +102,14 @@ export default function LoginForm() {
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
+          <div className="text-right">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
         </form>
 
         <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">

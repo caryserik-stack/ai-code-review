@@ -116,3 +116,66 @@ export const changePassword = async (
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ error: "Email is required" });
+      return;
+    }
+
+    await authService.forgotPassword(email);
+    res.status(200).json({ message: 'If this email exists, a reset link has been sent' })
+
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      res.status(400).json({ error: 'Token and new password are required' });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      res.status(400).json({ error: 'New password must be at least 8 characters' });
+      return;
+    }
+
+    await authService.resetPassword(token, newPassword);
+    res.status(200).json({ message: 'Password reset successfully' });
+
+  } catch (error: any) {
+    if (error.message === 'INVALID_TOKEN') {
+      res.status(400).json({ error: 'Invalid or expired reset link' });
+      return;
+    }
+
+    if (error.message === 'INVALID_EXPIRED') {
+      res.status(400).json({ error: 'Reset link has expired. Please request a new one' })
+      return;
+    }
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+
+export const verifyResetCode = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, code } = req.body
+    if (!email || !code) {
+      res.status(400).json({ error: 'Email and code are required' });
+      return;
+    }
+    await authService.verifyResetCode(email, code)
+    res.status(200).json({ message: 'Code verified' })
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Invalid code' });
+  }
+}

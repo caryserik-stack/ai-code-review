@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
-
+import crypto from "crypto";
+import { sendPasswordResetEmail } from "./email.service";
 // ──────────────────────────────────────────
 // ТИПЫ
 // ──────────────────────────────────────────
@@ -173,3 +174,67 @@ export const changePassword = async (
     data: { password: hashedPassword },
   });
 };
+
+// ──────────────────────────────────────────
+// FORGOT PASSWORD
+// ──────────────────────────────────────────
+export const forgotPassword = async (email: string) => {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) return;
+
+  await prisma.passwordResetToken.deleteMany({
+    where: { userId: user.id },
+  });
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+  await prisma.passwordResetToken.create({
+    data: { token: code, userId: user.id, expiresAt },
+  });
+
+  await sendPasswordResetEmail(email, code);
+};
+
+// ──────────────────────────────────────────
+// RESET PASSWORD
+// ──────────────────────────────────────────
+export const resetPassword = async (code: string, newPassword: string) => {
+  const resetToken = await prisma.passwordResetToken.findUnique({
+    where: { token: code }
+  });
+
+  if (!resetToken) throw new Error("INVALID_TOKEN");
+
+  if (resetToken.expiresAt < new Date()) {
+    await prisma.passwordResetToken.delete({ where: { token: code } });
+    throw new Error("TOKEN_EXPIRED");
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+  await prisma.user.update({
+    where: { id: resetToken.userId },
+    data: { password: hashedPassword },
+  });
+
+  await prisma.passwordResetToken.delete({ where: { token: code } });
+};
+
+// ──────────────────────────────────────────
+// VERIFY CODE
+// ──────────────────────────────────────────
+export const verifyResetCode = async (email: string, code: string) => {
+  const resetToken = await prisma.passwordResetToken.findUnique({
+    where: { token: code }
+  })
+
+  if (!resetToken) throw new Error("Invalid_code");
+  if (resetToken.expiresAt < new Date()) {
+    await prisma.passwordResetToken.delete({ where: { token: code } });
+    throw new Error("Code has expired. Please request a new one.");
+  }
+
+  const user = await prisma.user.findUnique({ where: {id : resetToken.userId} });
+  if (!user || user.email !== email) throw new Error('Invalid_code');
+}

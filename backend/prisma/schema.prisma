@@ -22,7 +22,8 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Связь: один User → много Review
-  reviews   Review[]
+  reviews              Review[]
+  passwordResetTokens  PasswordResetToken[]  
 
   @@map("users") // имя таблицы в БД
 }
@@ -88,4 +89,20 @@ enum ItemType {
   WARNING     // потенциальная проблема
   SUGGESTION  // улучшение best practices
   SECURITY    // уязвимость безопасности
+}
+
+// ──────────────────────────────────────────
+// FORGET-PASSWORD
+// ──────────────────────────────────────────
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
