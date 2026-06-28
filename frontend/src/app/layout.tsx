@@ -4,12 +4,44 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "sonner";
 
-
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AI Code Review",
-  description: "Analyze your code with AI",
+  title: {
+    default: "AI Code Review",
+    template: "%s · AI Code Review",
+  },
+  description:
+    "Paste your code, get instant AI feedback on bugs, security issues and style.",
+  keywords: ["code review", "AI", "programming", "bugs", "security"],
+  authors: [{ name: "AI Code Review" }],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://aicodereview.app",
+    siteName: "AI Code Review",
+    title: "AI Code Review — Instant AI feedback on your code",
+    description:
+      "Paste your code, get instant AI feedback on bugs, security issues and style — before your team sees it.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "AI Code Review",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI Code Review — Instant AI feedback on your code",
+    description:
+      "Paste your code, get instant AI feedback on bugs, security issues and style.",
+    images: ["/og-image.png"],
+  },
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
