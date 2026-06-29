@@ -16,12 +16,16 @@ const request = async (endpoint: string, options: RequestInit = {}) => {
   const data = text ? JSON.parse(text) : {};
 
   if (!response.ok) {
-    const error = new Error(data.error || "Something went wrong") as Error & {
-      status: number;
-    };
+    const message =
+      response.status === 429
+        ? "Too many requests. Please wait a moment and try again."
+        : data.error || "Something went wrong";
+
+    const error = new Error(message) as Error & { status: number };
     error.status = response.status;
     throw error;
   }
+
   return data;
 };
 
@@ -66,20 +70,41 @@ export const authApi = {
       body: JSON.stringify(data),
     }),
 
-
   verifyResetCode: (data: { email: string; code: string }) =>
     request("auth/verify-reset-code", {
       method: "POST",
       body: JSON.stringify(data),
-    })
+    }),
 };
 
 export const reviewApi = {
-  create: (data: { code: string; language: string }) =>
-    request("reviews", {
+  create: async (data: { code: string; language: string }) => {
+    const response = await fetch(`${API_URL}/api/reviews`, {
       method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    }),
+    });
+
+    const text = await response.text();
+    const responseData = text ? JSON.parse(text) : {};
+
+    if (!response.ok) {
+      const message =
+        response.status === 429
+          ? "Review limit reached. Please try again later."
+          : responseData.error || "Something went wrong";
+      const error = new Error(message) as Error & { status: number };
+      error.status = response.status;
+      throw error;
+    }
+
+    return {
+      ...responseData,
+      remaining: Number(response.headers.get("rateLimit-remaining") ?? -1),
+      limit: Number(response.headers.get("rateLimit-limit") ?? -1),
+    };
+  },
 
   getAll: () => request("/reviews"),
 

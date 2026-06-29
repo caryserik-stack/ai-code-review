@@ -10,14 +10,19 @@ interface ReviewListItem {
 interface ReviewsStore {
   reviews: ReviewListItem[];
   loaded: boolean;
+  remaining: number;
+  limit: number;
   fetchReviews: () => Promise<void>;
   addReview: (review: ReviewListItem) => void;
   removeReview: (id: string) => void;
+  setRateLimit: (remaining: number, limit: number) => void;
 }
 
 export const useReviewsStore = create<ReviewsStore>((set) => ({
   reviews: [],
   loaded: false,
+  remaining: -1,
+  limit: -1,
 
   fetchReviews: async () => {
     try {
@@ -34,5 +39,9 @@ export const useReviewsStore = create<ReviewsStore>((set) => ({
 
   removeReview: (id: string) => {
     set((state) => ({ reviews: state.reviews.filter((r) => r.id !== id) }));
-  }
+  },
+
+  setRateLimit: (remaining: number, limit: number) => {
+    set({ remaining, limit });
+  },
 }));

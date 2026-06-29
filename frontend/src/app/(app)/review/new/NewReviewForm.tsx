@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { reviewApi } from "@/lib/apiClient";
 import { useReviewsStore } from "@/store/reviewsStore";
@@ -26,11 +26,13 @@ export default function NewReviewForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const addReview = useReviewsStore((state) => state.addReview);
+  const setRateLimit = useReviewsStore((state) => state.setRateLimit);
+  const remaining = useReviewsStore((state) => state.remaining);
+  const limit = useReviewsStore((state) => state.limit);
 
   const isTooLong = code.length > MAX_CODE_LENGTH;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitReview = useCallback(async () => {
     setError("");
 
     const result = createReviewSchema.safeParse({ code, language });
@@ -39,6 +41,7 @@ export default function NewReviewForm() {
       return;
     }
 
+    if (loading) return;
     setLoading(true);
 
     try {
@@ -48,16 +51,29 @@ export default function NewReviewForm() {
         language: data.review.language,
         createdAt: data.review.createdAt,
       });
+
+      if (data.remaining !== -1) {
+        setRateLimit(data.remaining, data.limit);
+      }
+
       toast.success("Review created");
       router.push(`/review/${data.review.id}`);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Network error. Please try again.",
-      );
+      const message =
+        err instanceof Error ? err.message : "Network error. Please try again.";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [code, language, loading, addReview, router]);
+
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      submitReview();
+    },
+    [submitReview],
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -69,7 +85,7 @@ export default function NewReviewForm() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [code, loading, isTooLong]);
+  }, [code, loading, isTooLong, handleSubmit]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-surface-dark">
@@ -86,7 +102,7 @@ export default function NewReviewForm() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Выбор языка */}
-          <div className="bg-white dark:bg-card-dark p-4 rounded-xl border border-gray-200 dark:border-border-dark">
+          <fieldset className="bg-white dark:bg-card-dark p-4 rounded-xl border border-gray-200 dark:border-border-dark">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               Language
             </label>
@@ -106,16 +122,21 @@ export default function NewReviewForm() {
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           {/* Код */}
           <div className="bg-white dark:bg-card-dark p-4 rounded-xl border border-gray-200 dark:border-border-dark">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label
+              htmlFor="code-input"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            >
               Your Code
             </label>
             <textarea
+              id="code-input"
               value={code}
               onChange={(e) => setCode(e.target.value)}
+              disabled={loading}
               className="w-full h-64 font-mono text-sm border border-gray-300 dark:border-border-dark dark:bg-surface-dark dark:text-gray-100 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               placeholder="Paste your code here..."
               required
@@ -127,6 +148,25 @@ export default function NewReviewForm() {
               {isTooLong && "- Too Long 🚫"}
             </p>
           </div>
+
+          {limit > 0 && (
+            <div
+              className={`flex items-center justify-between text-xs px-1 ${
+                remaining <= 2
+                  ? "text-red-500 dark:text-red-400"
+                  : remaining <= 5
+                    ? "text-yellow-500 dark:text-yellow-400"
+                    : "text-gray-400 dark:text-gray-500"
+              }`}
+            >
+              <span>
+                {remaining <= 0
+                  ? "⛔ Review limit reached for this hour"
+                  : `${remaining} of ${limit} reviews remaining this hour`}
+              </span>
+              {remaining <= 2 && remaining > 0 && <span>⚠️</span>}
+            </div>
+          )}
 
           <button
             type="submit"
