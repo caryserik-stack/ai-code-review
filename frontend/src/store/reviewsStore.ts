@@ -26,8 +26,16 @@ export const useReviewsStore = create<ReviewsStore>((set) => ({
 
   fetchReviews: async () => {
     try {
-      const data = await reviewApi.getAll();
-      set({ reviews: data.reviews ?? [], loaded: true });
+      const [data, limits] = await Promise.all([
+        reviewApi.getAll(),
+        reviewApi.getLimits(),
+      ]);
+      set({
+        reviews: data.reviews ?? [],
+        loaded: true,
+        remaining: limits.remaining,
+        limit: limits.limit,
+      });
     } catch {
       set({ reviews: [], loaded: true });
     }

@@ -72,3 +72,7 @@ export const deleteReview = async (req: AuthRequest, res: Response): Promise<voi
     res.status(500).json({ error: 'Internal server error' })
   }
 }
+
+export const getLimits = async (req: AuthRequest, res: Response): Promise<void> => {
+  res.status(200).json({ message: 'ok' })
+}

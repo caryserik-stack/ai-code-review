@@ -10,5 +10,6 @@ router.post('/', authMiddleware, validate(createReviewSchema), reviewController.
 router.get('/', authMiddleware, reviewController.getReviews)
 router.get('/:id', authMiddleware, reviewController.getReviewById)
 router.delete('/:id', authMiddleware, reviewController.deleteReview)
+router.get('/limits', authMiddleware, reviewController.getLimits)
 
 export default router

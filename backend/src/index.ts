@@ -42,12 +42,21 @@ app.use('/api/auth/login', authLimiter)
 app.use('/api/auth/register', authLimiter)
 app.use('/api/auth/forgot-password', forgotPasswordLimiter)
 app.use('/api/auth', authRouter)
+
+app.use('/api/reviews/limits', (req, res, next) => {
+  if (req.method === 'GET') {
+    return reviewLimiter(req, res, next)
+  }
+  next()
+})
+
 app.use('/api/reviews', (req, res, next) => {
   if (req.method === 'POST') {
     return reviewLimiter(req, res, next)
   }
   next()
 })
+
 app.use('/api/reviews', reviewRouter)
 
 
