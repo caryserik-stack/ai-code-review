@@ -26,7 +26,6 @@ export default function NewReviewForm() {
   const [code, setCode] = useState("");
   const [language, setLanguage] = useState("typescript");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const addReview = useReviewsStore((state) => state.addReview);
   const setRateLimit = useReviewsStore((state) => state.setRateLimit);
   const remaining = useReviewsStore((state) => state.remaining);
@@ -38,11 +37,10 @@ export default function NewReviewForm() {
   const isTooLong = code.length > MAX_CODE_LENGTH;
 
   const submitReview = useCallback(async () => {
-    setError("");
 
     const result = createReviewSchema.safeParse({ code, language });
     if (!result.success) {
-      setError(result.error.issues[0].message);
+      toast.error(result.error.issues[0].message);
       return;
     }
 
@@ -81,6 +79,12 @@ export default function NewReviewForm() {
   );
 
   useEffect(() => {
+    reviewApi.getLimits().then((data) => {
+      setRateLimit(data.remaining, data.limit);
+    }).catch(() => {});
+  }, [])
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         if (code.length > 0 && !loading && !isTooLong) {
@@ -98,12 +102,6 @@ export default function NewReviewForm() {
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
           New Review
         </h2>
-
-        {error && (
-          <div className="bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 p-3 rounded-lg mb-4 text-sm">
-            {error}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Выбор языка */}

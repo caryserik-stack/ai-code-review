@@ -1,85 +1,128 @@
-import { Response } from 'express'
-import * as reviewService from '../services/review.service'
-import { AuthRequest } from '../types'
-import { prisma } from '../lib/prisma'
+import { Response } from "express";
+import * as reviewService from "../services/review.service";
+import { AuthRequest } from "../types";
+import { prisma } from "../lib/prisma";
 
-
-export const createReview = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createReview = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
-    const { code, language } = req.body
+    const { code, language } = req.body;
 
     if (!code || !language) {
-      res.status(400).json({ error: 'Code and language are required' })
-      return
+      res.status(400).json({ error: "Code and language are required" });
+      return;
     }
 
-    const user = await prisma.user.findUnique({ where: { id: req.userId! } })
+    const user = await prisma.user.findUnique({ where: { id: req.userId! } });
     if (!user?.emailVerified) {
-      res.status(403).json({ error: 'Please verify your email before creating reviews' })
-      return
+      res
+        .status(403)
+        .json({ error: "Please verify your email before creating reviews" });
+      return;
     }
 
     const review = await reviewService.createReview({
-     code,
-     language,
-     userId: req.userId!
-    })
+      code,
+      language,
+      userId: req.userId!,
+    });
 
-    res.status(201).json({ review})
+    const windowStart = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
 
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' })
-  }
-}
+    const used = await prisma.review.count({
+      where: {
+        userId: req.userId!,
+        createdAt: { gte: windowStart },
+      },
+    });
 
-
-
-export const getReviews = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const reviews = await reviewService.getReviews(req.userId!)
-    res.status(200).json({ reviews })
-
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' })
-  }
-}
-
-
-export const getReviewById = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params
-
-    const review = await reviewService.getReviewById(id, req.userId!)
-
-    res.status(200).json({ review })
-
+    res.status(201).json({
+      review,
+      remaining: Math.max(0, 5 - used),
+      limit: 5,
+    });
   } catch (error: any) {
-    if (error.message === 'REVIEW_NOT_FOUND') {
-      res.status(404).json({ error: 'Review not found' })
-      return
+    if (error.message === "REVIEW_LIMIT_REACHED") {
+      res.status(400).json({ error: "Review limit reached. You can create up to 5 reviews per hour." });
+      return;
     }
-    res.status(500).json({ error: 'Internal server error' })
+    res.status(500).json({ error: "Internal server error" });
   }
-}
+};
 
-
-export const deleteReview = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getReviews = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
-    const { id } = req.params
-
-    await reviewService.deleteReview(id, req.userId!)
-
-    res.status(200).send()
-
-  } catch(error: any) {
-    if (error.message === 'REVIEW_NOT_FOUND') {
-      res.status(404).json({ error: 'Review not found' })
-      return
-    }
-    res.status(500).json({ error: 'Internal server error' })
+    const reviews = await reviewService.getReviews(req.userId!);
+    res.status(200).json({ reviews });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
   }
-}
+};
 
-export const getLimits = async (req: AuthRequest, res: Response): Promise<void> => {
-  res.status(200).json({ message: 'ok' })
-}
+export const getReviewById = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const review = await reviewService.getReviewById(id, req.userId!);
+
+    res.status(200).json({ review });
+  } catch (error: any) {
+    if (error.message === "REVIEW_NOT_FOUND") {
+      res.status(404).json({ error: "Review not found" });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const deleteReview = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    await reviewService.deleteReview(id, req.userId!);
+
+    res.status(200).send();
+  } catch (error: any) {
+    if (error.message === "REVIEW_NOT_FOUND") {
+      res.status(404).json({ error: "Review not found" });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getLimits = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const LIMIT = 5;
+    const windowStart = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
+
+    const used = await prisma.review.count({
+      where: {
+        userId: req.userId!,
+        createdAt: { gte: windowStart },
+      },
+    });
+
+    res.status(200).json({
+      used,
+      limit: LIMIT,
+      remaining: Math.max(0, LIMIT - used),
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};

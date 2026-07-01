@@ -121,14 +121,5 @@ export const reviewApi = {
 
   delete: (id: string) => request(`/reviews/${id}`, { method: "DELETE" }),
 
-  getLimits: async () => {
-    const response = await fetch(`${API_URL}/api/reviews/limits`, {
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-    });
-    return {
-      remaining: Number(response.headers.get("ratelimit-remaining") ?? -1),
-      limit: Number(response.headers.get("ratelimit-limit") ?? -1),
-    };
-  },
+  getLimits: async () => request("/reviews/limits"),
 };

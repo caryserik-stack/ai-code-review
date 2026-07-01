@@ -1,53 +1,68 @@
-import { prisma } from '../lib/prisma'
-import { analyzeCode } from './ai.service'
+import { prisma } from "../lib/prisma";
+import { analyzeCode } from "./ai.service";
 
 // ──────────────────────
 // СОЗДАТЬ РЕВЬЮ
 // ──────────────────────
+
+const REVIEW_LIMIT = 5;
+const WINDOW_MS = 60 * 60 * 1000;
+
 export const createReview = async (data: {
-  code: string
-  language: string
-  userId: string
+  code: string;
+  language: string;
+  userId: string;
 }) => {
+  const windowStart = new Date(Date.now() - WINDOW_MS);
+  const used = await prisma.review.count({
+    where: {
+      userId: data.userId,
+      createdAt: { gte: windowStart },
+    },
+  });
+
+  if (used >= REVIEW_LIMIT) {
+    throw new Error("REVIEW_LIMIT_REACHED");
+  }
+
   // Шаг 1 — создаём запись со статусом PROCESSING
   const review = await prisma.review.create({
     data: {
       code: data.code,
       language: data.language,
       userId: data.userId,
-      status: 'PROCESSING',
-    }
-  })
+      status: "PROCESSING",
+    },
+  });
 
   try {
     // Шаг 2 — отправляем в AI (mock или реальный)
-    const result = await analyzeCode(data.code, data.language)
+    const result = await analyzeCode(data.code, data.language);
 
     // Шаг 3 — сохраняем результат
     const updatedReview = await prisma.review.update({
       where: { id: review.id },
       data: {
-        status: 'COMPLETED',
+        status: "COMPLETED",
         summary: result.summary,
         score: result.score,
         items: {
-          create: result.items
-        }
+          create: result.items,
+        },
       },
-      include: { items: true }
-    })
+      include: { items: true },
+    });
 
-    return updatedReview
-
+    return updatedReview;
   } catch (error) {
     // AI упал — помечаем FAILED
     await prisma.review.update({
       where: { id: review.id },
-      data: { status: 'FAILED' }
-    })
-    throw error
+      data: { status: "FAILED" },
+    });
+    throw error;
   }
-}
+};
 
 // ──────────────────────
 // ПОЛУЧИТЬ ВСЕ РЕВЬЮ
@@ -55,7 +70,7 @@ export const createReview = async (data: {
 export const getReviews = async (userId: string) => {
   const reviews = await prisma.review.findMany({
     where: { userId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     select: {
       id: true,
       language: true,
@@ -63,10 +78,10 @@ export const getReviews = async (userId: string) => {
       score: true,
       summary: true,
       createdAt: true,
-    }
-  })
-  return reviews
-}
+    },
+  });
+  return reviews;
+};
 
 // ──────────────────────
 // ПОЛУЧИТЬ ОДНО РЕВЬЮ
@@ -74,16 +89,15 @@ export const getReviews = async (userId: string) => {
 export const getReviewById = async (id: string, userId: string) => {
   const review = await prisma.review.findFirst({
     where: { id, userId },
-    include: { items: true }
-  })
+    include: { items: true },
+  });
 
   if (!review) {
-    throw new Error('REVIEW_NOT_FOUND')
+    throw new Error("REVIEW_NOT_FOUND");
   }
 
-  return review
-}
-
+  return review;
+};
 
 // ──────────────────────
 // УДАЛИТЬ РЕВЬЮ
@@ -91,14 +105,14 @@ export const getReviewById = async (id: string, userId: string) => {
 
 export const deleteReview = async (id: string, userId: string) => {
   const review = await prisma.review.findFirst({
-    where: { id, userId}
-  })
+    where: { id, userId },
+  });
 
   if (!review) {
-    throw new Error('REVIEW_NOT_FOUND')
+    throw new Error("REVIEW_NOT_FOUND");
   }
 
   await prisma.review.delete({
-    where: { id }
-  })
-}
+    where: { id },
+  });
+};
