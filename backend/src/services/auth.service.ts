@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
-import crypto from "crypto";
 import { sendPasswordResetEmail } from "./email.service";
+import { sendVerificationEmail } from "./email.service";
 // ──────────────────────────────────────────
 // ТИПЫ
 // ──────────────────────────────────────────
@@ -37,6 +37,7 @@ const safeUser = (user: any) => ({
   email: user.email,
   name: user.name,
   role: user.role,
+  emailVerified: user.emailVerified,
   createdAt: user.createdAt,
 });
 
@@ -68,6 +69,19 @@ export const register = async (input: RegisterInput) => {
       name,
     },
   });
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+  await prisma.emailVerificationToken.deleteMany({
+    where: { userId: user.id },
+  })
+
+  await prisma.emailVerificationToken.create({
+    data: { code, userId: user.id, expiresAt },
+  });
+
+  await sendVerificationEmail(email, code);
 
   // 4. Создаём токен
   const token = createToken(user.id, user.email);
@@ -201,7 +215,7 @@ export const forgotPassword = async (email: string) => {
 // ──────────────────────────────────────────
 export const resetPassword = async (code: string, newPassword: string) => {
   const resetToken = await prisma.passwordResetToken.findUnique({
-    where: { token: code }
+    where: { token: code },
   });
 
   if (!resetToken) throw new Error("INVALID_TOKEN");
@@ -226,8 +240,8 @@ export const resetPassword = async (code: string, newPassword: string) => {
 // ──────────────────────────────────────────
 export const verifyResetCode = async (email: string, code: string) => {
   const resetToken = await prisma.passwordResetToken.findUnique({
-    where: { token: code }
-  })
+    where: { token: code },
+  });
 
   if (!resetToken) throw new Error("Invalid_code");
   if (resetToken.expiresAt < new Date()) {
@@ -235,6 +249,61 @@ export const verifyResetCode = async (email: string, code: string) => {
     throw new Error("Code has expired. Please request a new one.");
   }
 
-  const user = await prisma.user.findUnique({ where: {id : resetToken.userId} });
-  if (!user || user.email !== email) throw new Error('Invalid_code');
-}
+  const user = await prisma.user.findUnique({
+    where: { id: resetToken.userId },
+  });
+  if (!user || user.email !== email) throw new Error("Invalid_code");
+};
+
+// ──────────────────────────────────────────
+// VERIFY EMAIL
+// ──────────────────────────────────────────
+
+export const verifyEmail = async (userId: string, code: string) => {
+  const verificationToken = await prisma.emailVerificationToken.findFirst({
+    where: { userId, code },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!verificationToken) {
+    throw new Error("INVALID_CODE");
+  }
+
+  if (verificationToken.expiresAt < new Date()) {
+    await prisma.emailVerificationToken.deleteMany({ where: { userId } });
+    throw new Error("CODE_EXPIRED");
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { emailVerified: true },
+  });
+
+  await prisma.emailVerificationToken.deleteMany({ where: { userId } });
+};
+
+export const resendVerificationCode = async (userId: string) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  console.log(
+    "resend: user found:",
+    user?.email,
+    "verified:",
+    user?.emailVerified,
+  );
+
+  if (!user) throw new Error("USER_NOT_FOUND");
+  if (user.emailVerified) throw new Error("ALREADY_VERIFIED");
+
+  await prisma.emailVerificationToken.deleteMany({ where: { userId } });
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+  await prisma.emailVerificationToken.create({
+    data: { code, userId, expiresAt },
+  });
+
+  console.log("resend: sending email to", user.email, "with code", code);
+  await sendVerificationEmail(user.email, code);
+  console.log("resend: email sent successfully");
+};

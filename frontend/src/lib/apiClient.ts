@@ -75,6 +75,15 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  verifyEmail: (data: { code: string }) =>
+    request("auth/verify-email", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  resendVerification: () =>
+    request("auth/resend-verification", { method: "POST" }),
 };
 
 export const reviewApi = {

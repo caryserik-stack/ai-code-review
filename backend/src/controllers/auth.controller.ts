@@ -179,3 +179,41 @@ export const verifyResetCode = async (req: Request, res: Response): Promise<void
     res.status(400).json({ error: error.message || 'Invalid code' });
   }
 }
+
+export const verifyEmail = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { code } = req.body
+
+    if (!code) {
+      res.status(400).json({ error: 'Code is required' })
+      return
+    }
+
+    await authService.verifyEmail(req.userId!, code)
+    res.status(200).json({ message: 'Email verified successfully' })
+
+  } catch (error: any) {
+    if (error.message === 'INVALID_CODE') {
+      res.status(400).json({ error: 'Invalid verification code' })
+      return
+    }
+    if (error.message === 'CODE_EXPIRED') {
+      res.status(400).json({ error: 'Code has expired. Please request a new one.' })
+      return
+    }
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+export const resendVerificationCode = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    await authService.resendVerificationCode(req.userId!)
+    res.status(200).json({ message: 'Verification code sent' })
+  } catch (error: any) {
+    if (error.message === 'ALREADY_VERIFIED') {
+      res.status(400).json({ error: 'Email already verified' })
+      return
+    }
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}

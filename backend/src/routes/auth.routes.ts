@@ -16,5 +16,7 @@ router.patch("/me/password", authMiddleware, authController.changePassword);
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
 router.post('/verify-reset-code', authController.verifyResetCode);
+router.post('/verify-email', authMiddleware, authController.verifyEmail)
+router.post('/resend-verification', authMiddleware, authController.resendVerificationCode)
 
 export default router;

@@ -31,7 +31,7 @@ export default function RegisterForm() {
     try {
       await authApi.register(result.data);
       toast.success("Account created!");
-      router.push("/review/new");
+      router.push("/verify-email");
     } catch (err) {
       setError(
         err instanceof Error

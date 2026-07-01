@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { reviewApi } from "@/lib/apiClient";
 import { useReviewsStore } from "@/store/reviewsStore";
 import { createReviewSchema, MAX_CODE_LENGTH } from "@/lib/validation/review";
 import { toast } from "sonner";
+import { useAuthStore } from "@/store/authStore";
 
 const LANGUAGES = [
   "typescript",
@@ -29,6 +31,9 @@ export default function NewReviewForm() {
   const setRateLimit = useReviewsStore((state) => state.setRateLimit);
   const remaining = useReviewsStore((state) => state.remaining);
   const limit = useReviewsStore((state) => state.limit);
+
+  const { user } = useAuthStore();
+  const emailNotVerified = user && !user.emailVerified;
 
   const isTooLong = code.length > MAX_CODE_LENGTH;
 
@@ -168,9 +173,20 @@ export default function NewReviewForm() {
             </div>
           )}
 
+          {emailNotVerified && (
+            <div className="bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-400 p-3 rounded-lg text-sm flex items-center justify-between">
+              <span>Please verify your email to create reviews</span>
+              <Link href="/verify-email?from=review" className="underline font-medium">
+                Verify now
+              </Link>
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={loading || code.length === 0 || isTooLong}
+            disabled={
+              loading || code.length === 0 || isTooLong || emailNotVerified
+            }
             className="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
           >
             <span>{loading ? "🤖 Analyzing..." : "🚀 Analyze Code"}</span>

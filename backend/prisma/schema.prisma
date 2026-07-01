@@ -13,19 +13,20 @@ datasource db {
 // USER
 // ──────────────────────────────────────────
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String
+  name          String?
+  role          Role     @default(USER)
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  // Связь: один User → много Review
   reviews              Review[]
-  passwordResetTokens  PasswordResetToken[]  
+  passwordResetTokens  PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
-  @@map("users") // имя таблицы в БД
+  @@map("users")
 }
 
 // ──────────────────────────────────────────
@@ -105,4 +106,20 @@ model PasswordResetToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
+}
+
+// ──────────────────────────────────────────
+// EMAIL-VERIFICATION
+// ──────────────────────────────────────────
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  code      String
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_verification_tokens")
 }

@@ -1,6 +1,7 @@
 import { Response } from 'express'
 import * as reviewService from '../services/review.service'
 import { AuthRequest } from '../types'
+import { prisma } from '../lib/prisma'
 
 
 export const createReview = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -9,6 +10,12 @@ export const createReview = async (req: AuthRequest, res: Response): Promise<voi
 
     if (!code || !language) {
       res.status(400).json({ error: 'Code and language are required' })
+      return
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.userId! } })
+    if (!user?.emailVerified) {
+      res.status(403).json({ error: 'Please verify your email before creating reviews' })
       return
     }
 
