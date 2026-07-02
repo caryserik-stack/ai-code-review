@@ -8,6 +8,7 @@ import { useReviewsStore } from "@/store/reviewsStore";
 import { createReviewSchema, MAX_CODE_LENGTH } from "@/lib/validation/review";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
+import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 
 const LANGUAGES = [
   "typescript",
@@ -37,7 +38,6 @@ export default function NewReviewForm() {
   const isTooLong = code.length > MAX_CODE_LENGTH;
 
   const submitReview = useCallback(async () => {
-
     const result = createReviewSchema.safeParse({ code, language });
     if (!result.success) {
       toast.error(result.error.issues[0].message);
@@ -79,22 +79,18 @@ export default function NewReviewForm() {
   );
 
   useEffect(() => {
-    reviewApi.getLimits().then((data) => {
-      setRateLimit(data.remaining, data.limit);
-    }).catch(() => {});
-  }, [])
+    reviewApi
+      .getLimits()
+      .then((data) => {
+        setRateLimit(data.remaining, data.limit);
+      })
+      .catch(() => {});
+  }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-        if (code.length > 0 && !loading && !isTooLong) {
-          handleSubmit(e as unknown as React.FormEvent);
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [code, loading, isTooLong, handleSubmit]);
+  useSubmitShortcut({
+    onSubmit: submitReview,
+    enabled: code.length > 0 && !loading && !isTooLong,
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-surface-dark">
@@ -174,7 +170,10 @@ export default function NewReviewForm() {
           {emailNotVerified && (
             <div className="bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-400 p-3 rounded-lg text-sm flex items-center justify-between">
               <span>Please verify your email to create reviews</span>
-              <Link href="/verify-email?from=review" className="underline font-medium">
+              <Link
+                href="/verify-email?from=review"
+                className="underline font-medium"
+              >
                 Verify now
               </Link>
             </div>

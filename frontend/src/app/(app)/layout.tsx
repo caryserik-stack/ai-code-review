@@ -12,6 +12,7 @@ import { reviewApi } from "@/lib/apiClient";
 import { SidebarSkeleton } from "@/components/skeletons/SidebarSkeleton";
 import { PageTransition } from "@/components/PageTransition";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -22,6 +23,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  useKeyboardShortcuts({
+    onToggleSidebar: () => setIsOpen(!isOpen),
+    onCloseSidebar: () => setIsOpen(false),
+    onCloseModal: () => setConfirmId(null),
+  });
 
   const {
     reviews,
