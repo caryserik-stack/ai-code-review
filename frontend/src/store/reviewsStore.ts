@@ -10,17 +10,24 @@ interface ReviewListItem {
 interface ReviewsStore {
   reviews: ReviewListItem[];
   loaded: boolean;
+  loadingMore: boolean;
+  nextCursor: string | null;
+  hasMore: boolean;
   remaining: number;
   limit: number;
   fetchReviews: () => Promise<void>;
+  loadMore: () => Promise<void>;
   addReview: (review: ReviewListItem) => void;
   removeReview: (id: string) => void;
   setRateLimit: (remaining: number, limit: number) => void;
 }
 
-export const useReviewsStore = create<ReviewsStore>((set) => ({
+export const useReviewsStore = create<ReviewsStore>((set, get) => ({
   reviews: [],
   loaded: false,
+  loadingMore: false,
+  nextCursor: null,
+  hasMore: false,
   remaining: -1,
   limit: -1,
 
@@ -33,11 +40,32 @@ export const useReviewsStore = create<ReviewsStore>((set) => ({
       set({
         reviews: data.reviews ?? [],
         loaded: true,
+        nextCursor: data.nextCursor,
+        hasMore: !!data.nextCursor,
         remaining: limits.remaining,
         limit: limits.limit,
       });
     } catch {
       set({ reviews: [], loaded: true });
+    }
+  },
+
+  loadMore: async () => {
+    const { nextCursor, loadingMore } = get();
+    if (!nextCursor || loadingMore) return;
+
+    set({ loadingMore: true });
+    try {
+      const data = await reviewApi.getAll(nextCursor);
+      set((state) => ({
+        reviews: [...state.reviews, ...data.reviews],
+        nextCursor: data.nextCursor,
+        hasMore: !!data.nextCursor,
+      }));
+    } catch {
+
+    } finally {
+      set({ loadingMore: false });
     }
   },
 

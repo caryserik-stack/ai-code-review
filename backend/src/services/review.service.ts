@@ -67,10 +67,15 @@ export const createReview = async (data: {
 // ──────────────────────
 // ПОЛУЧИТЬ ВСЕ РЕВЬЮ
 // ──────────────────────
-export const getReviews = async (userId: string) => {
+
+const REVIEWS_PER_PAGE = 10;
+
+export const getReviews = async (userId: string, cursor?: string) => {
   const reviews = await prisma.review.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
+    take: REVIEWS_PER_PAGE + 1,
+    ...(cursor && { cursor: { id: cursor }, skip: 1 }),
     select: {
       id: true,
       language: true,
@@ -80,7 +85,11 @@ export const getReviews = async (userId: string) => {
       createdAt: true,
     },
   });
-  return reviews;
+
+  const hasMore = reviews.length > REVIEWS_PER_PAGE; // > 10, не >= 10
+  const items = hasMore ? reviews.slice(0, REVIEWS_PER_PAGE) : reviews;
+  const nextCursor = hasMore ? items[items.length - 1].id : null;
+  return { reviews: items, nextCursor };
 };
 
 // ──────────────────────

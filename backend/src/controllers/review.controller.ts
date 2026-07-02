@@ -57,8 +57,9 @@ export const getReviews = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const reviews = await reviewService.getReviews(req.userId!);
-    res.status(200).json({ reviews });
+    const cursor = req.query.cursor as string | undefined;
+    const reviews = await reviewService.getReviews(req.userId!, cursor);
+    res.status(200).json(reviews);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }

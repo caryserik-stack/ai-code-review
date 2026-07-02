@@ -20,7 +20,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
-  const { reviews, fetchReviews, removeReview } = useReviewsStore();
+  const {
+    reviews,
+    fetchReviews,
+    removeReview,
+    loadMore,
+    loadingMore,
+    hasMore,
+  } = useReviewsStore();
 
   useEffect(() => {
     fetchMe();
@@ -190,6 +197,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
+
+          {!loading && user && hasMore && !search && (
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="w-full text-xs text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 py-2 transition-colors disabled:opacity-50"
+            >
+              {loadingMore ? "Loading..." : "Load more"}
+            </button>
+          )}
         </nav>
 
         {user && (

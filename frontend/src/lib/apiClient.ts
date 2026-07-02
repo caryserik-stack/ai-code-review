@@ -115,7 +115,7 @@ export const reviewApi = {
     };
   },
 
-  getAll: () => request("/reviews"),
+  getAll: (cursor?: string) => request(cursor ? `/reviews?cursor=${cursor}` : "/reviews"),
 
   getById: (id: string) => request(`/reviews/${id}`),
 
