@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { reviewApi } from "@/lib/apiClient";
 import { SidebarSkeleton } from "@/components/skeletons/SidebarSkeleton";
 import { PageTransition } from "@/components/PageTransition";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -19,6 +20,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const {
     reviews,
@@ -47,18 +50,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
+    setConfirmId(id);
+  };
 
-    if (!window.confirm("Delete this review?")) return;
-
+  const handleConfirmDelete = async () => {
+    if (!confirmId) return;
+    setDeleting(true);
     try {
-      await reviewApi.delete(id);
-      removeReview(id);
+      await reviewApi.delete(confirmId);
+      removeReview(confirmId);
       toast.success("Review deleted");
-      if (pathname === `/review/${id}`) {
+      if (pathname === `/review/${confirmId}`) {
         router.push("/review/new");
       }
     } catch {
       toast.error("Failed to delete review");
+    } finally {
+      setDeleting(false);
+      setConfirmId(null);
     }
   };
 
@@ -258,6 +267,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-y-auto pt-16">
         <PageTransition>{children}</PageTransition>
       </main>
+
+      <ConfirmModal
+        isOpen={!!confirmId}
+        title="Delete review?"
+        description="This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmId(null)}
+        loading={deleting}
+      />
     </div>
   );
 }
