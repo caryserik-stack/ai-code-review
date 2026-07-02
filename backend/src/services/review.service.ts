@@ -72,7 +72,7 @@ const REVIEWS_PER_PAGE = 10;
 
 export const getReviews = async (userId: string, cursor?: string) => {
   const reviews = await prisma.review.findMany({
-    where: { userId },
+    where: { userId, deletedAt: null },
     orderBy: { createdAt: "desc" },
     take: REVIEWS_PER_PAGE + 1,
     ...(cursor && { cursor: { id: cursor }, skip: 1 }),
@@ -97,7 +97,7 @@ export const getReviews = async (userId: string, cursor?: string) => {
 // ──────────────────────
 export const getReviewById = async (id: string, userId: string) => {
   const review = await prisma.review.findFirst({
-    where: { id, userId },
+    where: { id, userId, deletedAt: null },
     include: { items: true },
   });
 
@@ -114,14 +114,15 @@ export const getReviewById = async (id: string, userId: string) => {
 
 export const deleteReview = async (id: string, userId: string) => {
   const review = await prisma.review.findFirst({
-    where: { id, userId },
+    where: { id, userId, deletedAt: null },
   });
 
   if (!review) {
     throw new Error("REVIEW_NOT_FOUND");
   }
 
-  await prisma.review.delete({
+  await prisma.review.update({
     where: { id },
+    data: { deletedAt: new Date() },
   });
 };

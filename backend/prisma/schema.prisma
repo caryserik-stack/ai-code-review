@@ -34,19 +34,18 @@ model User {
 // ──────────────────────────────────────────
 model Review {
   id        String       @id @default(cuid())
-  code      String       // исходный код который прислал юзер
-  language  String       // typescript, python, etc
+  code      String
+  language  String
   status    ReviewStatus @default(PENDING)
-  summary   String?      // общее резюме от AI
-  score     Int?         // оценка качества кода 0-100
+  summary   String?
+  score     Int?
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
+  deletedAt DateTime?    // ← добавь это
 
-  // Связь с User (внешний ключ)
   userId    String
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Связь: один Review → много ReviewItem
   items     ReviewItem[]
 
   @@map("reviews")
