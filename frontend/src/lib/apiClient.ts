@@ -122,4 +122,6 @@ export const reviewApi = {
   delete: (id: string) => request(`/reviews/${id}`, { method: "DELETE" }),
 
   getLimits: async () => request("/reviews/limits"),
+
+  getCount: () => request("/reviews/count"),
 };

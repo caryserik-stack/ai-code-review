@@ -10,6 +10,7 @@ router.get('/limits', authMiddleware, reviewController.getLimits)
 
 router.post('/', authMiddleware, validate(createReviewSchema), reviewController.createReview)
 router.get('/', authMiddleware, reviewController.getReviews)
+router.get('/count', authMiddleware, reviewController.getReviewsCount)
 router.get('/:id', authMiddleware, reviewController.getReviewById)
 router.delete('/:id', authMiddleware, reviewController.deleteReview)
 

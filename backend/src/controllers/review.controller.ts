@@ -127,3 +127,12 @@ export const getLimits = async (
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const getReviewsCount = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const count = await reviewService.getReviewsCount(req.userId!);
+    res.status(200).json({ count });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+}

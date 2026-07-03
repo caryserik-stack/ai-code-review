@@ -15,6 +15,7 @@ interface ReviewsStore {
   hasMore: boolean;
   remaining: number;
   limit: number;
+  totalCount: number;
   fetchReviews: () => Promise<void>;
   loadMore: () => Promise<void>;
   addReview: (review: ReviewListItem) => void;
@@ -30,12 +31,14 @@ export const useReviewsStore = create<ReviewsStore>((set, get) => ({
   hasMore: false,
   remaining: -1,
   limit: -1,
+  totalCount: 0,
 
   fetchReviews: async () => {
     try {
-      const [data, limits] = await Promise.all([
+      const [data, limits, countData] = await Promise.all([
         reviewApi.getAll(),
         reviewApi.getLimits(),
+        reviewApi.getCount(),
       ]);
       set({
         reviews: data.reviews ?? [],
@@ -44,6 +47,7 @@ export const useReviewsStore = create<ReviewsStore>((set, get) => ({
         hasMore: !!data.nextCursor,
         remaining: limits.remaining,
         limit: limits.limit,
+        totalCount: countData.count,
       });
     } catch {
       set({ reviews: [], loaded: true });
@@ -63,18 +67,23 @@ export const useReviewsStore = create<ReviewsStore>((set, get) => ({
         hasMore: !!data.nextCursor,
       }));
     } catch {
-
     } finally {
       set({ loadingMore: false });
     }
   },
 
   addReview: (review) => {
-    set((state) => ({ reviews: [review, ...state.reviews] }));
+    set((state) => ({
+      reviews: [review, ...state.reviews],
+      totalCount: state.totalCount + 1,
+    }));
   },
 
   removeReview: (id: string) => {
-    set((state) => ({ reviews: state.reviews.filter((r) => r.id !== id) }));
+    set((state) => ({
+      reviews: state.reviews.filter((r) => r.id !== id),
+      totalCount: state.totalCount - 1,
+    }));
   },
 
   setRateLimit: (remaining: number, limit: number) => {

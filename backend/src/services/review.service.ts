@@ -126,3 +126,13 @@ export const deleteReview = async (id: string, userId: string) => {
     data: { deletedAt: new Date() },
   });
 };
+
+// ──────────────────────
+// СЧЕТЧИК РЕВЬЮ
+// ──────────────────────
+
+export const getReviewsCount = async (userId: string) => {
+  return prisma.review.count({
+    where: { userId, deletedAt: null },
+  });
+};

@@ -37,6 +37,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     loadMore,
     loadingMore,
     hasMore,
+    totalCount,
   } = useReviewsStore();
 
   useEffect(() => {
@@ -118,9 +119,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             >
               + New Review
             </Link>
-            {reviews.length > 0 && (
+            {totalCount > 0 && (
               <p className="text-xs text-center text-gray-400 dark:text-gray-500">
-                {reviews.length} {reviews.length === 1 ? "review" : "reviews"}
+                {totalCount} {totalCount === 1 ? "review" : "reviews"}
               </p>
             )}
           </div>
