@@ -1,6 +1,12 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-const request = async (endpoint: string, options: RequestInit = {}) => {
+let isRefreshing = false;
+
+const request = async (
+  endpoint: string,
+  options: RequestInit = {},
+  retry = true,
+) => {
   const cleanEndpoint = endpoint.replace(/^\//, "");
 
   const response = await fetch(`${API_URL}/api/${cleanEndpoint}`, {
@@ -11,6 +17,23 @@ const request = async (endpoint: string, options: RequestInit = {}) => {
       ...options.headers,
     },
   });
+
+  if (response.status === 401 && retry && !isRefreshing) {
+    isRefreshing = true;
+    try {
+      await fetch(`${API_URL}/api/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+      });
+      isRefreshing = false;
+
+      return request(endpoint, options, false);
+    } catch {
+      isRefreshing = false;
+      window.location.href = "/login";
+      throw new Error("Session expired");
+    }
+  }
 
   const text = await response.text();
   const data = text ? JSON.parse(text) : {};
@@ -84,7 +107,11 @@ export const authApi = {
 
   resendVerification: () =>
     request("auth/resend-verification", { method: "POST" }),
+
+  refresh: () => request("auth/refresh", { method: "POST" }),
 };
+
+  
 
 export const reviewApi = {
   create: async (data: { code: string; language: string }) => {
@@ -115,7 +142,8 @@ export const reviewApi = {
     };
   },
 
-  getAll: (cursor?: string) => request(cursor ? `/reviews?cursor=${cursor}` : "/reviews"),
+  getAll: (cursor?: string) =>
+    request(cursor ? `/reviews?cursor=${cursor}` : "/reviews"),
 
   getById: (id: string) => request(`/reviews/${id}`),
 

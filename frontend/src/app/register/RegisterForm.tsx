@@ -42,7 +42,7 @@ export default function RegisterForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-surface-dark flex items-center justify-center relative">
+    <div className="min-h-screen bg-gray-50 dark:bg-surface-dark flex items-center justify-center relative px-4">
       <Link
         href="/"
         className="absolute top-6 left-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"

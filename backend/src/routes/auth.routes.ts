@@ -10,6 +10,8 @@ router.post("/register", validate(registerSchema), authController.register);
 router.post("/login", validate(loginSchema), authController.login);
 router.post("/logout", authController.logout);
 
+router.post("/refresh", authController.refresh);
+
 router.get("/me", authMiddleware, authController.getMe);
 router.patch("/me", authMiddleware, authController.updateProfile);
 router.patch("/me/password", authMiddleware, authController.changePassword);

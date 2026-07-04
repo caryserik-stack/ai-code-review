@@ -6,7 +6,7 @@ const PROTECTED_PATHS = ["/review", "/profile"];
 const AUTH_PATHS = ["/login", "/register", "/forgot-password"];
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get("jwt_token")?.value;
+  const token = request.cookies.get("access_token")?.value;
   const { pathname } = request.nextUrl;
 
   const isProtectedRoute = PROTECTED_PATHS.some((path) =>

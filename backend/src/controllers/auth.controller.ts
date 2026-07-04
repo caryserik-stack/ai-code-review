@@ -2,23 +2,32 @@ import { Request, Response } from "express";
 import * as authService from "../services/auth.service";
 import { AuthRequest } from "../types";
 
-const COOKIE_OPTIONS = {
+const ACCESS_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict" as const,
+  maxAge: 15 * 60 * 1000, // 7 дней
+};
+
+const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
   sameSite: "strict" as const,
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 дней
+  path: "/api/auth/refresh",
 };
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password, name } = req.body;
-    const { token, user } = await authService.register({
+    const { accessToken, refreshToken, user } = await authService.register({
       email,
       password,
       name,
     });
 
-    res.cookie("jwt_token", token, COOKIE_OPTIONS);
+    res.cookie("access_token", accessToken, ACCESS_COOKIE_OPTIONS);
+    res.cookie("refresh_token", refreshToken, REFRESH_COOKIE_OPTIONS);
     res.status(201).json({ user });
   } catch (error: any) {
     if (error.message === "EMAIL_EXISTS") {
@@ -32,9 +41,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
-    const { token, user } = await authService.login({ email, password });
+    const { accessToken, refreshToken, user } = await authService.login({
+      email,
+      password,
+    });
 
-    res.cookie("jwt_token", token, COOKIE_OPTIONS);
+    res.cookie("access_token", accessToken, ACCESS_COOKIE_OPTIONS);
+    res.cookie("refresh_token", refreshToken, REFRESH_COOKIE_OPTIONS);
     res.status(200).json({ user });
   } catch (error: any) {
     if (error.message === "INVALID_CREDENTIALS") {
@@ -45,8 +58,33 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+export const refresh = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = req.cookies?.refresh_token;
+    if (!token) {
+      res.status(401).json({ error: "No refresh token" });
+      return;
+    }
+
+    const { accessToken, refreshToken, user } =
+      await authService.refreshTokens(token);
+
+    res.cookie("access_token", accessToken, ACCESS_COOKIE_OPTIONS);
+    res.cookie("refresh_token", refreshToken, REFRESH_COOKIE_OPTIONS);
+    res.status(200).json({ user });
+  } catch (error: any) {
+    res.clearCookie("access_token");
+    res.clearCookie("refresh_token");
+    res.status(401).json({ error: "Session expired, please login again" });
+  }
+};
+
 export const logout = async (req: Request, res: Response): Promise<void> => {
-  res.clearCookie("jwt_token", COOKIE_OPTIONS);
+  const refreshToken = req.cookies?.refresh_token;
+  await authService.logout(refreshToken);
+
+  res.clearCookie("access_token", ACCESS_COOKIE_OPTIONS);
+  res.clearCookie("refresh_token", REFRESH_COOKIE_OPTIONS);
   res.status(200).json({ message: "Logged out successfully" });
 };
 
@@ -117,7 +155,10 @@ export const changePassword = async (
   }
 };
 
-export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+export const forgotPassword = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   try {
     const { email } = req.body;
 
@@ -127,93 +168,109 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     }
 
     await authService.forgotPassword(email);
-    res.status(200).json({ message: 'If this email exists, a reset link has been sent' })
-
+    res
+      .status(200)
+      .json({ message: "If this email exists, a reset link has been sent" });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' })
+    res.status(500).json({ error: "Internal server error" });
   }
-}
+};
 
-export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   try {
     const { token, newPassword } = req.body;
 
     if (!token || !newPassword) {
-      res.status(400).json({ error: 'Token and new password are required' });
+      res.status(400).json({ error: "Token and new password are required" });
       return;
     }
 
     if (newPassword.length < 8) {
-      res.status(400).json({ error: 'New password must be at least 8 characters' });
+      res
+        .status(400)
+        .json({ error: "New password must be at least 8 characters" });
       return;
     }
 
     await authService.resetPassword(token, newPassword);
-    res.status(200).json({ message: 'Password reset successfully' });
-
+    res.status(200).json({ message: "Password reset successfully" });
   } catch (error: any) {
-    if (error.message === 'INVALID_TOKEN') {
-      res.status(400).json({ error: 'Invalid or expired reset link' });
+    if (error.message === "INVALID_TOKEN") {
+      res.status(400).json({ error: "Invalid or expired reset link" });
       return;
     }
 
-    if (error.message === 'INVALID_EXPIRED') {
-      res.status(400).json({ error: 'Reset link has expired. Please request a new one' })
+    if (error.message === "INVALID_EXPIRED") {
+      res
+        .status(400)
+        .json({ error: "Reset link has expired. Please request a new one" });
       return;
     }
-    res.status(500).json({ error: 'Internal server error' })
+    res.status(500).json({ error: "Internal server error" });
   }
-}
+};
 
-
-export const verifyResetCode = async (req: Request, res: Response): Promise<void> => {
+export const verifyResetCode = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   try {
-    const { email, code } = req.body
+    const { email, code } = req.body;
     if (!email || !code) {
-      res.status(400).json({ error: 'Email and code are required' });
+      res.status(400).json({ error: "Email and code are required" });
       return;
     }
-    await authService.verifyResetCode(email, code)
-    res.status(200).json({ message: 'Code verified' })
+    await authService.verifyResetCode(email, code);
+    res.status(200).json({ message: "Code verified" });
   } catch (error: any) {
-    res.status(400).json({ error: error.message || 'Invalid code' });
+    res.status(400).json({ error: error.message || "Invalid code" });
   }
-}
+};
 
-export const verifyEmail = async (req: AuthRequest, res: Response): Promise<void> => {
+export const verifyEmail = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
-    const { code } = req.body
+    const { code } = req.body;
 
     if (!code) {
-      res.status(400).json({ error: 'Code is required' })
-      return
+      res.status(400).json({ error: "Code is required" });
+      return;
     }
 
-    await authService.verifyEmail(req.userId!, code)
-    res.status(200).json({ message: 'Email verified successfully' })
-
+    await authService.verifyEmail(req.userId!, code);
+    res.status(200).json({ message: "Email verified successfully" });
   } catch (error: any) {
-    if (error.message === 'INVALID_CODE') {
-      res.status(400).json({ error: 'Invalid verification code' })
-      return
+    if (error.message === "INVALID_CODE") {
+      res.status(400).json({ error: "Invalid verification code" });
+      return;
     }
-    if (error.message === 'CODE_EXPIRED') {
-      res.status(400).json({ error: 'Code has expired. Please request a new one.' })
-      return
+    if (error.message === "CODE_EXPIRED") {
+      res
+        .status(400)
+        .json({ error: "Code has expired. Please request a new one." });
+      return;
     }
-    res.status(500).json({ error: 'Internal server error' })
+    res.status(500).json({ error: "Internal server error" });
   }
-}
+};
 
-export const resendVerificationCode = async (req: AuthRequest, res: Response): Promise<void> => {
+export const resendVerificationCode = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
-    await authService.resendVerificationCode(req.userId!)
-    res.status(200).json({ message: 'Verification code sent' })
+    await authService.resendVerificationCode(req.userId!);
+    res.status(200).json({ message: "Verification code sent" });
   } catch (error: any) {
-    if (error.message === 'ALREADY_VERIFIED') {
-      res.status(400).json({ error: 'Email already verified' })
-      return
+    if (error.message === "ALREADY_VERIFIED") {
+      res.status(400).json({ error: "Email already verified" });
+      return;
     }
-    res.status(500).json({ error: 'Internal server error' })
+    res.status(500).json({ error: "Internal server error" });
   }
-}
+};
