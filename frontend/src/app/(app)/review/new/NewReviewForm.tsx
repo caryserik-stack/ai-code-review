@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { reviewApi } from "@/lib/apiClient";
 import { useReviewsStore } from "@/store/reviewsStore";
-import { createReviewSchema, MAX_CODE_LENGTH } from "@/lib/validation/review";
+import { createReviewSchema, MAX_CODE_LENGTH, REVIEWER_LEVELS } from "@/lib/validation/review";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
 import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
@@ -19,7 +19,7 @@ import {
 } from "@/components/review/StatusBanners";
 import { Loader2, Sparkles, UploadCloud } from "lucide-react";
 
-const REVIEWER_LEVELS = ["junior", "middle", "senior"] as const;
+
 type ReviewerLevel = (typeof REVIEWER_LEVELS)[number];
 const LANGUAGE_OPTIONS = Object.keys(LANGUAGE_EXTENSIONS);
 

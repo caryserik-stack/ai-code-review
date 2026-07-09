@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { reviewApi } from "@/lib/apiClient";
 import { ReviewSkeleton } from "@/components/skeletons/ReviewSkeleton";
 import { CodeBlock } from "@/components/CodeBlock";
+import { IssueAccordion } from "@/components/review/IssueAccordion";
 
 interface ReviewItem {
   id: string;
@@ -19,6 +20,7 @@ interface Review {
   id: string;
   code: string;
   language: string;
+  revewerLevel: string;
   status: string;
   score: number | null;
   summary: string | null;
@@ -69,43 +71,21 @@ export default function ReviewPage() {
     return () => clearInterval(interval);
   }, [review?.status, params.id]);
 
-  // Цвет и иконка для типа замечания
-  const getItemStyle = (type: string) => {
-    switch (type) {
-      case "ERROR":
-        return {
-          border: "border-l-red-500",
-          badge: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300",
-          icon: "🔴",
-        };
-      case "WARNING":
-        return {
-          border: "border-l-yellow-500",
-          badge:
-            "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300",
-          icon: "🟡",
-        };
-      case "SECURITY":
-        return {
-          border: "border-l-purple-500",
-          badge:
-            "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300",
-          icon: "🔒",
-        };
-      default:
-        return {
-          border: "border-l-blue-500",
-          badge:
-            "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
-          icon: "💡",
-        };
-    }
-  };
-
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600 dark:text-green-400";
     if (score >= 60) return "text-yellow-600 dark:text-yellow-400";
     return "text-red-600 dark:text-red-400";
+  };
+
+  const getLevelStyle = (level: string) => {
+    switch (level.toUpperCase()) {
+      case "MIDDLE":
+        return "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300";
+      case "SENIOR":
+        return "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300";
+      default:
+        return "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300";
+    }
   };
 
   if (loading) {
@@ -145,7 +125,7 @@ export default function ReviewPage() {
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-6">
         {/* Score карточка */}
         <div className="bg-white dark:bg-card-dark p-6 rounded-xl border border-gray-200 dark:border-border-dark">
-          <div className="flex justify-between items-start">
+          <div className="flex justify-between items-start gap-4">
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Language
@@ -154,6 +134,18 @@ export default function ReviewPage() {
                 {review.language}
               </p>
             </div>
+
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Reviewed as
+              </p>
+              <span
+                className={`inline-block mt-0.5 text-xs px-2 py-0.5 rounded-full font-medium capitalize ${getLevelStyle(review.reviewerLevel)}`}
+              >
+                {review.reviewerLevel.toLowerCase()}
+              </span>
+            </div>
+
             {review.score !== null && (
               <div className="text-right">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -167,7 +159,6 @@ export default function ReviewPage() {
               </div>
             )}
           </div>
-
           {review.summary && (
             <p className="mt-4 text-gray-600 dark:text-gray-300 text-sm border-t border-gray-100 dark:border-border-dark pt-4">
               {review.summary}
@@ -176,58 +167,7 @@ export default function ReviewPage() {
         </div>
 
         {/* Замечания */}
-        {review.items.length > 0 && (
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
-              Issues ({review.items.length})
-            </h2>
-            <div className="space-y-3">
-              {review.items.map((item) => {
-                const style = getItemStyle(item.type);
-                return (
-                  <div
-                    key={item.id}
-                    className={`p-4 rounded-xl border border-l-4 ${style.border} bg-white dark:bg-card-dark border-gray-200 dark:border-border-dark`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <span>{style.icon}</span>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.badge}`}
-                          >
-                            {item.type}
-                          </span>
-                          {item.line && (
-                            <span className="text-xs text-gray-400 dark:text-gray-500">
-                              Line {item.line}
-                            </span>
-                          )}
-                        </div>
-                        <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">
-                          {item.title}
-                        </p>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm mt-1">
-                          {item.description}
-                        </p>
-                        {item.suggestion && (
-                          <div className="mt-2 bg-white dark:bg-card-dark rounded-lg p-2 border border-gray-200 dark:border-border-dark">
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                              Suggestion:
-                            </p>
-                            <code className="text-xs text-gray-800 dark:text-gray-200 font-mono">
-                              {item.suggestion}
-                            </code>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <IssueAccordion items={review.items} />
 
         {/* Исходный код */}
         <div className="bg-white dark:bg-card-dark p-4 rounded-xl border border-gray-200 dark:border-border-dark">
