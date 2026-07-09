@@ -2,18 +2,21 @@ import { Response } from "express";
 import * as reviewService from "../services/review.service";
 import { AuthRequest } from "../types";
 import { prisma } from "../lib/prisma";
+import { createReviewSchema } from "../lib/schemas";
 
 export const createReview = async (
   req: AuthRequest,
   res: Response,
 ): Promise<void> => {
   try {
-    const { code, language } = req.body;
+    const parsed = createReviewSchema.safeParse(req.body);
 
-    if (!code || !language) {
-      res.status(400).json({ error: "Code and language are required" });
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0].message });
       return;
     }
+
+    const { code, language, reviewerLevel } = parsed.data;
 
     const user = await prisma.user.findUnique({ where: { id: req.userId! } });
     if (!user?.emailVerified) {
@@ -26,6 +29,7 @@ export const createReview = async (
     const review = await reviewService.createReview({
       code,
       language,
+      reviewerLevel,
       userId: req.userId!,
     });
 
@@ -45,7 +49,12 @@ export const createReview = async (
     });
   } catch (error: any) {
     if (error.message === "REVIEW_LIMIT_REACHED") {
-      res.status(400).json({ error: "Review limit reached. You can create up to 5 reviews per hour." });
+      res
+        .status(400)
+        .json({
+          error:
+            "Review limit reached. You can create up to 5 reviews per hour.",
+        });
       return;
     }
     res.status(500).json({ error: "Internal server error" });
@@ -128,11 +137,14 @@ export const getLimits = async (
   }
 };
 
-export const getReviewsCount = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getReviewsCount = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
     const count = await reviewService.getReviewsCount(req.userId!);
     res.status(200).json({ count });
   } catch {
     res.status(500).json({ error: "Internal server error" });
   }
-}
+};

@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
-import { analyzeCode } from "./ai.service";
+import { analyzeCode, REVIEWER_LEVEL_TO_PRISMA } from "./ai.service";
+import type { ReviewerLevel } from "./ai.service";
 
 // ──────────────────────
 // СОЗДАТЬ РЕВЬЮ
@@ -11,6 +12,7 @@ const WINDOW_MS = 60 * 60 * 1000;
 export const createReview = async (data: {
   code: string;
   language: string;
+  reviewerLevel: ReviewerLevel;
   userId: string;
 }) => {
   const windowStart = new Date(Date.now() - WINDOW_MS);
@@ -27,9 +29,10 @@ export const createReview = async (data: {
 
   // Шаг 1 — создаём запись со статусом PROCESSING
   const review = await prisma.review.create({
-    data: {
+    data: { 
       code: data.code,
       language: data.language,
+      reviewerLevel: REVIEWER_LEVEL_TO_PRISMA[data.reviewerLevel],
       userId: data.userId,
       status: "PROCESSING",
     },
@@ -37,7 +40,11 @@ export const createReview = async (data: {
 
   try {
     // Шаг 2 — отправляем в AI (mock или реальный)
-    const result = await analyzeCode(data.code, data.language);
+    const result = await analyzeCode(
+      data.code,
+      data.language,
+      data.reviewerLevel,
+    );
 
     // Шаг 3 — сохраняем результат
     const updatedReview = await prisma.review.update({

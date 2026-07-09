@@ -12,6 +12,8 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 })
 
+export const REVIEWER_LEVELS = ['junior', 'middle', 'senior'] as const
+
 // Review schemas
 export const createReviewSchema = z.object({
   code: z.string()
@@ -23,4 +25,7 @@ export const createReviewSchema = z.object({
   ], {
     errorMap: () => ({ message: 'Unsupported language' })
   }),
+  reviewerLevel: z.enum(REVIEWER_LEVELS, {
+    errorMap: () => ({ message: 'Invalid reviewer level' }),
+  }).default('junior'),
 })

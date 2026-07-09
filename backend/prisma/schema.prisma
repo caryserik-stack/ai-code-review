@@ -33,15 +33,16 @@ model User {
 // REVIEW
 // ──────────────────────────────────────────
 model Review {
-  id        String       @id @default(cuid())
-  code      String
-  language  String
-  status    ReviewStatus @default(PENDING)
-  summary   String?
-  score     Int?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  deletedAt DateTime?    // ← добавь это
+  id            String       @id @default(cuid())
+  code          String
+  language      String
+  reviewerLevel ReviewerLevel @default(JUNIOR)
+  status        ReviewStatus @default(PENDING)
+  summary       String?
+  score         Int?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
 
   userId    String
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -89,6 +90,12 @@ enum ItemType {
   WARNING     // потенциальная проблема
   SUGGESTION  // улучшение best practices
   SECURITY    // уязвимость безопасности
+}
+
+enum ReviewerLevel {
+  JUNIOR
+  MIDDLE
+  SENIOR
 }
 
 // ──────────────────────────────────────────
