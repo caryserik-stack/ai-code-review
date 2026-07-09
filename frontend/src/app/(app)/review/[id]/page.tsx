@@ -6,6 +6,7 @@ import { reviewApi } from "@/lib/apiClient";
 import { ReviewSkeleton } from "@/components/skeletons/ReviewSkeleton";
 import { CodeBlock } from "@/components/CodeBlock";
 import { IssueAccordion } from "@/components/review/IssueAccordion";
+import { QualityGateBanner } from "@/components/review/QualityGateBanner";
 
 interface ReviewItem {
   id: string;
@@ -165,6 +166,9 @@ export default function ReviewPage() {
             </p>
           )}
         </div>
+
+        {/* Quality Gate баннер */}
+        <QualityGateBanner items={review.items} />
 
         {/* Замечания */}
         <IssueAccordion items={review.items} />
