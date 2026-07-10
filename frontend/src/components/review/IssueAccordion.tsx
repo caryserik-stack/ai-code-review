@@ -55,9 +55,10 @@ const DEFAULT_OPEN_TYPES: ReadonlySet<IssueType> = new Set([
 
 type IssueAccordionItemProps = {
   item: ReviewItem;
+  onLineClick?: (line: number) => void;
 };
 
-function IssueAccordionItem({ item }: IssueAccordionItemProps) {
+function IssueAccordionItem({ item, onLineClick }: IssueAccordionItemProps) {
   const [isOpen, setIsOpen] = useState(DEFAULT_OPEN_TYPES.has(item.type));
   const style = ITEM_STYLES[item.type];
 
@@ -80,7 +81,21 @@ function IssueAccordionItem({ item }: IssueAccordionItemProps) {
               {item.type}
             </span>
             {item.line && (
-              <span className="text-xs text-gray-400 dark:text-gray-500">
+              // stopPropagation — иначе клик по номеру строки также
+              // триггернул бы onClick родительской кнопки (сворачивание карточки)
+              <span
+                role={onLineClick ? "button" : undefined}
+                onClick={(e) => {
+                  if (!item.line || !onLineClick) return;
+                  e.stopPropagation();
+                  onLineClick(item.line);
+                }}
+                className={`text-xs text-gray-400 dark:text-gray-500 ${
+                  onLineClick
+                    ? "hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
+                    : ""
+                }`}
+              >
                 Line {item.line}
               </span>
             )}
@@ -134,9 +149,10 @@ function IssueAccordionItem({ item }: IssueAccordionItemProps) {
 
 type IssueAccordionProps = {
   items: ReviewItem[];
+  onLineClick?: (line: number) => void;
 };
 
-export function IssueAccordion({ items }: IssueAccordionProps) {
+export function IssueAccordion({ items, onLineClick }: IssueAccordionProps) {
   if (items.length === 0) return null;
 
   return (
@@ -146,7 +162,11 @@ export function IssueAccordion({ items }: IssueAccordionProps) {
       </h2>
       <div className="space-y-3">
         {items.map((item) => (
-          <IssueAccordionItem key={item.id} item={item} />
+          <IssueAccordionItem
+            key={item.id}
+            item={item}
+            onLineClick={onLineClick}
+          />
         ))}
       </div>
     </div>

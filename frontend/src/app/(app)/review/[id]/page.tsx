@@ -33,6 +33,14 @@ export default function ReviewPage() {
   const params = useParams();
   const [review, setReview] = useState<Review | null>(null);
   const [loading, setLoading] = useState(true);
+  const [highlightLine, setHighlightLine] = useState<number | null>(null);
+
+  const handleLineClick = (line: number) => {
+    setHighlightLine(null);
+    requestAnimationFrame(() => {
+      setHighlightLine(line);
+    })
+  }
 
   useEffect(() => {
     fetchReview();
@@ -171,14 +179,14 @@ export default function ReviewPage() {
         <QualityGateBanner items={review.items} />
 
         {/* Замечания */}
-        <IssueAccordion items={review.items} />
+        <IssueAccordion items={review.items} onLineClick={handleLineClick} />
 
         {/* Исходный код */}
         <div className="bg-white dark:bg-card-dark p-4 rounded-xl border border-gray-200 dark:border-border-dark">
           <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
             Source Code
           </h2>
-          <CodeBlock code={review.code} language={review.language} />
+          <CodeBlock code={review.code} language={review.language} highlightLine={highlightLine} />
         </div>
       </main>
     </div>

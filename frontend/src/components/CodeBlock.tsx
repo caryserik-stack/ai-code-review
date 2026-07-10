@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { codeToHtml } from "shiki";
 import { useTheme } from "next-themes";
 import { Copy, Check } from "lucide-react";
@@ -8,6 +8,7 @@ import { Copy, Check } from "lucide-react";
 interface CodeBlockProps {
   code: string;
   language: string;
+  highlightLine?: number | null; // строка, на которую нужно проскроллить и подсветить
 }
 
 const LANGUAGE_MAP: Record<string, string> = {
@@ -22,11 +23,25 @@ const LANGUAGE_MAP: Record<string, string> = {
   html: "html",
 };
 
-export function CodeBlock({ code, language }: CodeBlockProps) {
+// Shiki оборачивает каждую строку в <span class="line">...</span>.
+// Добавляем id="code-line-N" на каждую, чтобы потом находить строку
+// через document.getElementById и скроллить/подсвечивать её.
+// Регулярка использует replace с функцией-счётчиком — Shiki не проставляет
+// номера строк сам, приходится считать по порядку вхождений.
+function addLineIds(html: string): string {
+  let lineNumber = 0;
+  return html.replace(/<span class="line">/g, () => {
+    lineNumber += 1;
+    return `<span class="line" id="code-line-${lineNumber}">`;
+  });
+}
+
+export function CodeBlock({ code, language, highlightLine }: CodeBlockProps) {
   const { resolvedTheme } = useTheme();
   const [html, setHtml] = useState("");
   const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -39,9 +54,37 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
     const theme = resolvedTheme === "dark" ? "github-dark" : "github-light";
 
     codeToHtml(code, { lang, theme })
-      .then(setHtml)
+      .then((result) => setHtml(addLineIds(result)))
       .catch(() => setHtml(""));
   }, [code, language, resolvedTheme, mounted]);
+
+  // Реагируем на изменение highlightLine — скроллим к строке и подсвечиваем её
+  // временным фоном. Не используем CSS-класс через Tailwind, потому что
+  // подсвечиваемый span находится внутри dangerouslySetInnerHTML — Tailwind
+  // не может применить conditional-класс к динамически вставленному узлу,
+  // поэтому стиль ставим напрямую через DOM API.
+  useEffect(() => {
+    if (!highlightLine || !containerRef.current) return;
+
+    const lineEl = containerRef.current.querySelector<HTMLElement>(
+      `#code-line-${highlightLine}`,
+    );
+    if (!lineEl) return;
+
+    lineEl.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    lineEl.style.transition = "background-color 0.3s ease";
+    lineEl.style.backgroundColor =
+      resolvedTheme === "dark"
+        ? "rgba(250, 204, 21, 0.15)"
+        : "rgba(250, 204, 21, 0.25)";
+
+    const timeout = setTimeout(() => {
+      lineEl.style.backgroundColor = "transparent";
+    }, 2000);
+
+    return () => clearTimeout(timeout);
+  }, [highlightLine, html, resolvedTheme]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code);
@@ -51,7 +94,6 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
 
   return (
     <div className="relative">
-      {/* Кнопка Copy — снаружи от dangerouslySetInnerHTML */}
       <div className="absolute top-3 right-3 z-10">
         <button
           onClick={handleCopy}
@@ -63,10 +105,10 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
         </button>
       </div>
 
-      {/* Блок с подсветкой — отдельный контейнер */}
       {html ? (
         <div
-          className="rounded-lg overflow-x-auto text-xs [&>pre]:p-4 [&>pre]:m-0 [&>pre]:rounded-lg [&>pre]:pr-20"
+          ref={containerRef}
+          className="rounded-lg overflow-x-auto text-xs [&>pre]:p-4 [&>pre]:m-0 [&>pre]:rounded-lg [&>pre]:pr-20 [&_.line]:block [&_.line]:px-2 [&_.line]:-mx-2 [&_.line]:rounded"
           dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : (
