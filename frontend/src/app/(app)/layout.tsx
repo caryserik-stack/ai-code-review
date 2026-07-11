@@ -1,61 +1,63 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { useReviewsStore } from "@/store/reviewsStore";
 import { useEffect, useState } from "react";
-import { Menu, X, Trash2, LogOut } from "lucide-react";
+import { Menu } from "lucide-react";
 import { toast } from "sonner";
 import { reviewApi } from "@/lib/apiClient";
-import { SidebarSkeleton } from "@/components/skeletons/SidebarSkeleton";
 import { PageTransition } from "@/components/PageTransition";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { motion } from "framer-motion";
+
+const RAIL_COLLAPSED_KEY = "sidebar-rail-collapsed";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const router = useRouter();
-  const { user, logout, loading, fetchMe } = useAuthStore();
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const { user, loading, fetchMe } = useAuthStore();
+  const { fetchReviews, removeReview } = useReviewsStore();
+
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [railCollapsed, setRailCollapsed] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(RAIL_COLLAPSED_KEY);
+    if (saved === "true") setRailCollapsed(true);
+    setMounted(true);
+  }, []);
+
+  const toggleSidebar = () => {
+    if (window.innerWidth < 768) {
+      setMobileOpen((v) => !v);
+    } else {
+      setRailCollapsed((prev) => {
+        const next = !prev;
+        localStorage.setItem(RAIL_COLLAPSED_KEY, String(next));
+        return next;
+      });
+    }
+  };
 
   useKeyboardShortcuts({
-    onToggleSidebar: () => setIsOpen(!isOpen),
-    onCloseSidebar: () => setIsOpen(false),
+    onToggleSidebar: toggleSidebar,
+    onCloseSidebar: () => setMobileOpen(false),
     onCloseModal: () => setConfirmId(null),
   });
-
-  const {
-    reviews,
-    fetchReviews,
-    removeReview,
-    loadMore,
-    loadingMore,
-    hasMore,
-    totalCount,
-  } = useReviewsStore();
 
   useEffect(() => {
     fetchMe();
   }, [fetchMe]);
-
   useEffect(() => {
-    if (!loading && user) {
-      fetchReviews();
-    }
+    if (!loading && user) fetchReviews();
   }, [user, loading, fetchReviews]);
 
-  const handleLogout = async () => {
-    await logout();
-    router.push("/login");
-  };
-
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDelete = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
     setConfirmId(id);
@@ -68,7 +70,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       await reviewApi.delete(confirmId);
       removeReview(confirmId);
       toast.success("Review deleted");
-      if (pathname === `/review/${confirmId}`) {
+      if (window.location.pathname === `/review/${confirmId}`) {
         router.push("/review/new");
       }
     } catch {
@@ -79,200 +81,67 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const filteredReviews = reviews
-    .filter((r) => r.language.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      const diff =
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      return sortOrder === "newest" ? diff : -diff;
-    });
+  const showRail = mounted && railCollapsed;
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-surface-dark relative">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-surface-dark">
+      {/*
+        ВАЖНО: раньше здесь был AnimatePresence, переключающий между
+        двумя РАЗНЫМИ компонентами (Sidebar и SidebarRail) — из-за этого
+        иконки физически размонтировались и монтировались заново, отсюда
+        и "исчезают, потом появляются". Теперь монтируется только ОДИН
+        Sidebar, и его collapsed-проп просто переключает внутренние
+        CSS-классы (текст гаснет через opacity, иконки остаются на месте
+        и просто сдвигаются вместе с изменением реальной ширины обёртки).
+        Иконки никогда не покидают DOM — отсюда плавный, непрерывный вид.
+      */}
+      <motion.div
+        animate={{ width: showRail ? 64 : 256 }}
+        transition={{ duration: 0.2, ease: "easeInOut" }}
+        className="hidden md:block h-screen sticky top-0 shrink-0 overflow-hidden bg-white dark:bg-card-dark border-r border-gray-200 dark:border-border-dark"
+      >
+        <Sidebar
+          collapsed={showRail}
+          onCollapse={toggleSidebar}
+          onExpand={toggleSidebar}
+          onDelete={handleDelete}
+        />
+      </motion.div>
+
+      {/* Мобильный drawer — без изменений */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-card-dark border-r border-gray-200 dark:border-border-dark flex flex-col transition-transform duration-200 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
+        className={`md:hidden fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-card-dark border-r border-gray-200 dark:border-border-dark transition-transform duration-200 ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="p-4 border-b border-gray-200 dark:border-border-dark flex items-center justify-between">
-          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            AI Code Review
-          </h1>
-          <div className="flex items-center gap-1">
-            <ThemeToggle />
-            <button
-              onClick={() => setIsOpen(false)}
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-surface-dark transition-colors"
-              aria-label="Close sidebar"
-            >
-              <X size={18} />
-            </button>
-          </div>
-        </div>
-
-        {user && (
-          <div className="p-3 space-y-2">
-            <Link
-              href="/review/new"
-              onClick={() => setIsOpen(false)}
-              className="block w-full text-center bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-            >
-              + New Review
-            </Link>
-            {totalCount > 0 && (
-              <p className="text-xs text-center text-gray-400 dark:text-gray-500">
-                {totalCount} {totalCount === 1 ? "review" : "reviews"}
-              </p>
-            )}
-          </div>
-        )}
-
-        <nav className="flex-1 overflow-y-auto px-2 py-1">
-          {loading && <SidebarSkeleton />}
-
-          {!loading && user && reviews.length > 0 && (
-            <div className="mb-2 px-1 space-y-1.5">
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search reviews..."
-                className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-border-dark bg-gray-50 dark:bg-surface-dark text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setSortOrder("newest")}
-                  className={`flex-1 text-xs py-1 rounded-lg transition-colors ${
-                    sortOrder === "newest"
-                      ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-surface-dark"
-                  }`}
-                >
-                  Newest
-                </button>
-                <button
-                  onClick={() => setSortOrder("oldest")}
-                  className={`flex-1 text-xs py-1 rounded-lg transition-colors ${
-                    sortOrder === "oldest"
-                      ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-surface-dark"
-                  }`}
-                >
-                  Oldest
-                </button>
-              </div>
-            </div>
-          )}
-
-          {!loading && !user && (
-            <p className="text-sm text-gray-400 dark:text-gray-500 text-center mt-8 px-4">
-              Sign in to see your reviews
-            </p>
-          )}
-
-          {!loading && user && reviews.length === 0 && (
-            <p className="text-sm text-gray-400 dark:text-gray-500 text-center mt-8 px-4">
-              No reviews yet
-            </p>
-          )}
-
-          {!loading &&
-            user &&
-            reviews.length > 0 &&
-            filteredReviews.length === 0 && (
-              <p className="text-sm text-gray-400 dark:text-gray-500 text-center mt-8 px-4">
-                No reviews found for &quot;{search}&quot;
-              </p>
-            )}
-
-          {!loading &&
-            user &&
-            filteredReviews.map((review) => {
-              const isActive = pathname === `/review/${review.id}`;
-              return (
-                <Link
-                  key={review.id}
-                  href={`/review/${review.id}`}
-                  onClick={() => setIsOpen(false)}
-                  className={`group flex items-center justify-between px-3 py-2 rounded-lg text-sm mb-1 transition-colors ${
-                    isActive
-                      ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-surface-dark"
-                  }`}
-                >
-                  <span className="truncate">
-                    {review.language} ·{" "}
-                    {new Date(review.createdAt).toLocaleDateString()}
-                  </span>
-                  <button
-                    onClick={(e) => handleDelete(e, review.id)}
-                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-opacity flex-shrink-0 ml-2"
-                    aria-label="Delete review"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </Link>
-              );
-            })}
-
-          {!loading && user && hasMore && !search && (
-            <button
-              onClick={loadMore}
-              disabled={loadingMore}
-              className="w-full text-xs text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 py-2 transition-colors disabled:opacity-50"
-            >
-              {loadingMore ? "Loading..." : "Load more"}
-            </button>
-          )}
-        </nav>
-
-        {user && (
-          <div className="p-3 border-t border-gray-200 dark:border-border-dark space-y-1">
-            <Link
-              href="/profile"
-              onClick={() => setIsOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                pathname === "/profile"
-                  ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-surface-dark"
-              }`}
-            >
-              <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-700 dark:text-blue-300 text-xs font-bold flex-shrink-0">
-                {user?.name?.[0]?.toUpperCase() ??
-                  user?.email?.[0]?.toUpperCase() ??
-                  "?"}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">
-                  {user?.name ?? "No name"}
-                </p>
-                <p className="text-xs truncate text-gray-400 dark:text-gray-500">
-                  {user?.email}
-                </p>
-              </div>
-            </Link>
-
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-2 text-left text-sm text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
-            >
-              <LogOut size={15} />
-              Logout
-            </button>
-          </div>
-        )}
+        <Sidebar
+          onCollapse={() => setMobileOpen(false)}
+          onDelete={handleDelete}
+          onNavigate={() => setMobileOpen(false)}
+          showCloseButton
+        />
       </aside>
 
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed top-4 left-4 z-40 w-9 h-9 flex items-center justify-center rounded-lg bg-white dark:bg-card-dark border border-gray-200 dark:border-border-dark text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-surface-dark transition-colors"
-          aria-label="Open sidebar"
-        >
-          <Menu size={18} />
-        </button>
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/40 z-20"
+          onClick={() => setMobileOpen(false)}
+        />
       )}
-      <main className="flex-1 overflow-y-auto pt-16">
+
+      <main className="flex-1 min-w-0 overflow-y-auto">
+        <div className="md:hidden sticky top-0 z-10 bg-white dark:bg-card-dark border-b border-gray-200 dark:border-border-dark px-4 h-[57px] flex items-center gap-3">
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-surface-dark transition-colors"
+            aria-label="Open sidebar"
+          >
+            <Menu size={18} />
+          </button>
+          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            AI Code Review
+          </span>
+        </div>
         <PageTransition>{children}</PageTransition>
       </main>
 
