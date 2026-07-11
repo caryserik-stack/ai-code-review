@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Copy } from "lucide-react";
 import { reviewApi } from "@/lib/apiClient";
 import { toast } from "sonner";
 
@@ -66,10 +66,29 @@ type DiffBlockProps = {
 };
 
 function DiffBlock({ originalCode, suggestedCode }: DiffBlockProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // не даём клику всплыть до кнопки-заголовка карточки
+    await navigator.clipboard.writeText(suggestedCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <div className="mt-2 rounded-lg overflow-hidden border border-gray-200 dark:border-border-dark font-mono text-xs">
+    <div className="relative mt-2 rounded-lg overflow-hidden border border-gray-200 dark:border-border-dark font-mono text-xs">
+      <button
+        type="button"
+        onClick={handleCopy}
+        aria-label="Copy suggested code"
+        className="absolute top-1.5 right-1.5 z-10 flex items-center gap-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded px-1.5 py-1 text-[10px] shadow-sm transition-colors"
+      >
+        {copied ? <Check size={11} /> : <Copy size={11} />}
+        {copied ? "Copied!" : "Copy"}
+      </button>
+
       {originalCode && (
-        <div className="flex bg-red-50 dark:bg-red-950/40 px-2 py-1.5">
+        <div className="flex bg-red-50 dark:bg-red-950/40 px-2 py-1.5 pr-16">
           <span className="select-none text-red-500 dark:text-red-400 mr-2 shrink-0">
             −
           </span>
@@ -78,7 +97,7 @@ function DiffBlock({ originalCode, suggestedCode }: DiffBlockProps) {
           </code>
         </div>
       )}
-      <div className="flex bg-green-50 dark:bg-green-950/40 px-2 py-1.5">
+      <div className="flex bg-green-50 dark:bg-green-950/40 px-2 py-1.5 pr-16">
         <span className="select-none text-green-600 dark:text-green-400 mr-2 shrink-0">
           +
         </span>
