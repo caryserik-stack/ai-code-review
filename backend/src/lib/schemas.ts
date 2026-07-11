@@ -29,3 +29,7 @@ export const createReviewSchema = z.object({
     errorMap: () => ({ message: 'Invalid reviewer level' }),
   }).default('junior'),
 })
+
+export const toggleResolvedSchema = z.object({
+  resolved: z.boolean(),
+});

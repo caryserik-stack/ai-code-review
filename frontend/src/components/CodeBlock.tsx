@@ -74,17 +74,17 @@ export function CodeBlock({ code, language, highlightLine }: CodeBlockProps) {
     lineEl.scrollIntoView({ behavior: "smooth", block: "center" });
 
     lineEl.style.transition = "background-color 0.3s ease";
-    lineEl.style.backgroundColor =
-      resolvedTheme === "dark"
-        ? "rgba(250, 204, 21, 0.15)"
-        : "rgba(250, 204, 21, 0.25)";
+    lineEl.style.backgroundColor = resolvedTheme === "dark"
+      ? "rgba(250, 204, 21, 0.15)"
+      : "rgba(250, 204, 21, 0.25)";
 
     const timeout = setTimeout(() => {
       lineEl.style.backgroundColor = "transparent";
     }, 2000);
 
     return () => clearTimeout(timeout);
-  }, [highlightLine, html, resolvedTheme]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightLine]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code);

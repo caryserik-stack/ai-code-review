@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
+import { reviewApi } from "@/lib/apiClient";
+import { toast } from "sonner";
 
 type IssueType = "ERROR" | "WARNING" | "SUGGESTION" | "SECURITY";
 
@@ -13,6 +15,7 @@ type ReviewItem = {
   description: string;
   line: number | null;
   suggestion: string | null;
+  resolved: boolean;
 };
 
 type IssueStyle = {
@@ -46,8 +49,6 @@ const ITEM_STYLES: Record<IssueType, IssueStyle> = {
   },
 };
 
-// ERROR и SECURITY — сразу видимые проблемы, открываем по умолчанию.
-// WARNING/SUGGESTION — второстепенное, юзер разворачивает по желанию.
 const DEFAULT_OPEN_TYPES: ReadonlySet<IssueType> = new Set([
   "ERROR",
   "SECURITY",
@@ -56,22 +57,80 @@ const DEFAULT_OPEN_TYPES: ReadonlySet<IssueType> = new Set([
 type IssueAccordionItemProps = {
   item: ReviewItem;
   onLineClick?: (line: number) => void;
+  onResolvedChange: (id: string, resolved: boolean) => void;
 };
 
-function IssueAccordionItem({ item, onLineClick }: IssueAccordionItemProps) {
-  const [isOpen, setIsOpen] = useState(DEFAULT_OPEN_TYPES.has(item.type));
+function IssueAccordionItem({
+  item,
+  onLineClick,
+  onResolvedChange,
+}: IssueAccordionItemProps) {
+  // Если issue уже resolved (например, при загрузке страницы) — сразу свёрнут,
+  // независимо от типа. Иначе — обычное правило по типу.
+  const [isOpen, setIsOpen] = useState(
+    !item.resolved && DEFAULT_OPEN_TYPES.has(item.type),
+  );
+  const [isSaving, setIsSaving] = useState(false);
   const style = ITEM_STYLES[item.type];
+
+  const handleResolveToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // не даём клику по чекбоксу сворачивать/разворачивать карточку
+
+    const nextResolved = !item.resolved;
+
+    // Оптимистичное обновление — сразу обновляем UI (родитель хранит items),
+    // не дожидаясь ответа сервера. Если запрос упадёт — откатываем.
+    onResolvedChange(item.id, nextResolved);
+    if (nextResolved) setIsOpen(false); // автосворачивание при отметке resolved
+
+    setIsSaving(true);
+    try {
+      await reviewApi.toggleItemResolved(item.id, nextResolved);
+    } catch (err) {
+      // откат при ошибке сети/сервера
+      onResolvedChange(item.id, !nextResolved);
+      toast.error("Failed to update issue status");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div
-      className={`rounded-xl border border-l-4 ${style.border} bg-white dark:bg-card-dark border-gray-200 dark:border-border-dark overflow-hidden`}
+      className={`rounded-xl border border-l-4 ${style.border} bg-white dark:bg-card-dark border-gray-200 dark:border-border-dark overflow-hidden transition-opacity ${
+        item.resolved ? "opacity-50" : ""
+      }`}
     >
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setIsOpen((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsOpen((v) => !v);
+          }
+        }}
         aria-expanded={isOpen}
-        className="w-full flex items-start gap-3 p-4 text-left hover:bg-gray-50 dark:hover:bg-surface-dark/50 transition-colors"
+        className="w-full flex items-start gap-3 p-4 text-left hover:bg-gray-50 dark:hover:bg-surface-dark/50 transition-colors cursor-pointer"
       >
+        {/* Чекбокс resolved — отдельная кликабельная зона слева от иконки типа */}
+        <button
+          type="button"
+          onClick={handleResolveToggle}
+          disabled={isSaving}
+          aria-label={item.resolved ? "Mark as unresolved" : "Mark as resolved"}
+          className={`shrink-0 mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+            item.resolved
+              ? "bg-green-500 border-green-500"
+              : "border-gray-300 dark:border-gray-600 hover:border-green-500"
+          } ${isSaving ? "opacity-50" : ""}`}
+        >
+          {item.resolved && (
+            <Check className="w-3 h-3 text-white" strokeWidth={3} />
+          )}
+        </button>
+
         <span className="shrink-0">{style.icon}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -81,8 +140,6 @@ function IssueAccordionItem({ item, onLineClick }: IssueAccordionItemProps) {
               {item.type}
             </span>
             {item.line && (
-              // stopPropagation — иначе клик по номеру строки также
-              // триггернул бы onClick родительской кнопки (сворачивание карточки)
               <span
                 role={onLineClick ? "button" : undefined}
                 onClick={(e) => {
@@ -100,7 +157,13 @@ function IssueAccordionItem({ item, onLineClick }: IssueAccordionItemProps) {
               </span>
             )}
           </div>
-          <p className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">
+          <p
+            className={`font-medium text-sm truncate ${
+              item.resolved
+                ? "text-gray-400 dark:text-gray-500 line-through"
+                : "text-gray-900 dark:text-gray-100"
+            }`}
+          >
             {item.title}
           </p>
         </div>
@@ -111,10 +174,8 @@ function IssueAccordionItem({ item, onLineClick }: IssueAccordionItemProps) {
         >
           <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
         </motion.span>
-      </button>
+      </div>
 
-      {/* AnimatePresence + height: auto — framer сам меряет реальную высоту
-          контента перед анимацией, никаких magic numbers как в CSS-хаках */}
       <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
@@ -150,22 +211,45 @@ function IssueAccordionItem({ item, onLineClick }: IssueAccordionItemProps) {
 type IssueAccordionProps = {
   items: ReviewItem[];
   onLineClick?: (line: number) => void;
+  onItemsChange: (items: ReviewItem[]) => void;
 };
 
-export function IssueAccordion({ items, onLineClick }: IssueAccordionProps) {
+export function IssueAccordion({
+  items,
+  onLineClick,
+  onItemsChange,
+}: IssueAccordionProps) {
   if (items.length === 0) return null;
+
+  const resolvedCount = items.filter((i) => i.resolved).length;
+
+  // Оптимистично обновляем локальный список items у родителя —
+  // родитель (страница) хранит review.items в своём стейте
+  const handleResolvedChange = (id: string, resolved: boolean) => {
+    onItemsChange(
+      items.map((item) => (item.id === id ? { ...item, resolved } : item)),
+    );
+  };
 
   return (
     <div>
-      <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
-        Issues ({items.length})
-      </h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+          Issues ({items.length})
+        </h2>
+        {resolvedCount > 0 && (
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            {resolvedCount} of {items.length} resolved
+          </span>
+        )}
+      </div>
       <div className="space-y-3">
         {items.map((item) => (
           <IssueAccordionItem
             key={item.id}
             item={item}
             onLineClick={onLineClick}
+            onResolvedChange={handleResolvedChange}
           />
         ))}
       </div>

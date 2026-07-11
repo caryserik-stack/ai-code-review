@@ -29,7 +29,7 @@ export const createReview = async (data: {
 
   // Шаг 1 — создаём запись со статусом PROCESSING
   const review = await prisma.review.create({
-    data: { 
+    data: {
       code: data.code,
       language: data.language,
       reviewerLevel: REVIEWER_LEVEL_TO_PRISMA[data.reviewerLevel],
@@ -141,5 +141,32 @@ export const deleteReview = async (id: string, userId: string) => {
 export const getReviewsCount = async (userId: string) => {
   return prisma.review.count({
     where: { userId, deletedAt: null },
+  });
+};
+
+// ──────────────────────
+// ПЕРЕКЛЮЧИТЬ RESOLVED У ITEM
+// ──────────────────────
+
+export const toggleItemResolved = async (
+  itemId: string,
+  resolved: boolean,
+  userId: string,
+) => {
+  // Проверяем, что item принадлежит ревью этого юзера
+  const item = await prisma.reviewItem.findFirst({
+    where: {
+      id: itemId,
+      review: { userId, deletedAt: null },
+    },
+  });
+
+  if (!item) {
+    throw new Error("REVIEW_ITEM_NOT_FOUND");
+  }
+
+  return prisma.reviewItem.update({
+    where: { id: itemId },
+    data: { resolved },
   });
 };

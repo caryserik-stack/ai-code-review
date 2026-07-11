@@ -87,7 +87,11 @@ export const authApi = {
 };
 
 export const reviewApi = {
-  create: async (data: { code: string; language: string; reviewerLevel: string }) => {
+  create: async (data: {
+    code: string;
+    language: string;
+    reviewerLevel: string;
+  }) => {
     const response = await fetch(`${API_URL}/api/reviews`, {
       method: "POST",
       credentials: "include",
@@ -115,7 +119,8 @@ export const reviewApi = {
     };
   },
 
-  getAll: (cursor?: string) => request(cursor ? `/reviews?cursor=${cursor}` : "/reviews"),
+  getAll: (cursor?: string) =>
+    request(cursor ? `/reviews?cursor=${cursor}` : "/reviews"),
 
   getById: (id: string) => request(`/reviews/${id}`),
 
@@ -124,4 +129,10 @@ export const reviewApi = {
   getLimits: async () => request("/reviews/limits"),
 
   getCount: () => request("/reviews/count"),
+
+  toggleItemResolved: (itemId: string, resolved: boolean) =>
+    request(`/reviews/items/${itemId}/resolve`, {
+      method: "PATCH",
+      body: JSON.stringify({ resolved }),
+    }),
 };

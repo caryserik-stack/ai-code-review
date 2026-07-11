@@ -2,21 +2,14 @@ import { Response } from "express";
 import * as reviewService from "../services/review.service";
 import { AuthRequest } from "../types";
 import { prisma } from "../lib/prisma";
-import { createReviewSchema } from "../lib/schemas";
+import { createReviewSchema, toggleResolvedSchema } from "../lib/schemas";
 
 export const createReview = async (
   req: AuthRequest,
   res: Response,
 ): Promise<void> => {
   try {
-    const parsed = createReviewSchema.safeParse(req.body);
-
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.issues[0].message });
-      return;
-    }
-
-    const { code, language, reviewerLevel } = parsed.data;
+    const { code, language, reviewerLevel } = req.body;
 
     const user = await prisma.user.findUnique({ where: { id: req.userId! } });
     if (!user?.emailVerified) {
@@ -49,12 +42,9 @@ export const createReview = async (
     });
   } catch (error: any) {
     if (error.message === "REVIEW_LIMIT_REACHED") {
-      res
-        .status(400)
-        .json({
-          error:
-            "Review limit reached. You can create up to 5 reviews per hour.",
-        });
+      res.status(400).json({
+        error: "Review limit reached. You can create up to 5 reviews per hour.",
+      });
       return;
     }
     res.status(500).json({ error: "Internal server error" });
@@ -145,6 +135,30 @@ export const getReviewsCount = async (
     const count = await reviewService.getReviewsCount(req.userId!);
     res.status(200).json({ count });
   } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const toggleItemResolved = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { itemId } = req.params;
+    const { resolved } = req.body;
+
+    const item = await reviewService.toggleItemResolved(
+      itemId,
+      resolved,
+      req.userId!,
+    );
+
+    res.status(200).json({ item });
+  } catch (error: any) {
+    if (error.message === "REVIEW_ITEM_NOT_FOUND") {
+      res.status(404).json({ error: "Review item not found" });
+      return;
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 };

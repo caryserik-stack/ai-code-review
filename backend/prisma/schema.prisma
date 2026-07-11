@@ -62,6 +62,7 @@ model ReviewItem {
   description String     // подробное объяснение
   line        Int?       // номер строки в коде
   suggestion  String?    // как исправить
+  resolved    Boolean    @default(false)    
 
   // Связь с Review (внешний ключ)
   reviewId    String

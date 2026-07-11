@@ -15,6 +15,7 @@ interface ReviewItem {
   description: string;
   line: number | null;
   suggestion: string | null;
+  resolved: boolean;
 }
 
 interface Review {
@@ -39,8 +40,8 @@ export default function ReviewPage() {
     setHighlightLine(null);
     requestAnimationFrame(() => {
       setHighlightLine(line);
-    })
-  }
+    });
+  };
 
   useEffect(() => {
     fetchReview();
@@ -179,14 +180,27 @@ export default function ReviewPage() {
         <QualityGateBanner items={review.items} />
 
         {/* Замечания */}
-        <IssueAccordion items={review.items} onLineClick={handleLineClick} />
+        <IssueAccordion
+          items={review.items}
+          onLineClick={handleLineClick}
+          onItemsChange={(updatedItems) => {
+            setReview((prev) =>
+              prev ? { ...prev, items: updatedItems } : prev,
+            );
+          }}
+        />
 
         {/* Исходный код */}
         <div className="bg-white dark:bg-card-dark p-4 rounded-xl border border-gray-200 dark:border-border-dark">
           <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
             Source Code
           </h2>
-          <CodeBlock code={review.code} language={review.language} highlightLine={highlightLine} />
+          <CodeBlock
+            code={review.code}
+            language={review.language}
+            highlightLine={highlightLine}
+            onHighlightDone={() => setHighlightLine(null)}
+          />
         </div>
       </main>
     </div>
