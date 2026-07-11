@@ -7,7 +7,8 @@ export interface ReviewResult {
     title: string;
     description: string;
     line?: number;
-    suggestion?: string;
+    originalCode?: string;
+    suggestedCode?: string;
   }[];
 }
 
@@ -30,7 +31,8 @@ const MOCK_ITEMS_BY_LEVEL: Record<ReviewerLevel, ReviewResult["items"]> = {
       description:
         "In TypeScript, explicitly typing variables (instead of relying on inference) makes your code easier to read for other developers, and catches mistakes earlier.",
       line: 1,
-      suggestion: "const x: number = 1",
+      originalCode: "const x: number = 1",
+      suggestedCode: "const x: number = 1",
     },
     {
       type: "WARNING",
@@ -38,7 +40,6 @@ const MOCK_ITEMS_BY_LEVEL: Record<ReviewerLevel, ReviewResult["items"]> = {
       description:
         'Variable "x" is declared but never used anywhere else in the code. Unused variables often signal leftover debug code or a forgotten step — consider removing it or double-checking your logic.',
       line: 1,
-      suggestion: "Remove the unused variable, or use it where intended",
     },
     {
       type: "SUGGESTION",
@@ -55,21 +56,21 @@ const MOCK_ITEMS_BY_LEVEL: Record<ReviewerLevel, ReviewResult["items"]> = {
       description:
         "Variable declarations should have explicit types in TypeScript",
       line: 1,
-      suggestion: "const x: number = 1",
+      originalCode: "const x = 1",
+      suggestedCode: "const x: number = 1",
     },
     {
       type: "WARNING",
       title: "Unused variable",
       description: "Variable x is declared but never used",
       line: 1,
-      suggestion: "Remove unused variable or use it in your code",
     },
     {
       type: "SECURITY",
       title: "No input validation",
       description: "Consider validating inputs before processing",
       line: 1,
-      suggestion: "Add input validation at the beginning of the function",
+      suggestedCode: "if (!input) throw new Error('Input is required');",
     },
   ],
   senior: [
@@ -79,8 +80,7 @@ const MOCK_ITEMS_BY_LEVEL: Record<ReviewerLevel, ReviewResult["items"]> = {
       description:
         "No validation at the function entry point. In production, unvalidated input at API boundaries is a common source of injection and type-confusion bugs.",
       line: 1,
-      suggestion:
-        "Validate with a schema (e.g. Zod) at the boundary, not deep in business logic",
+      suggestedCode: "const parsed = schema.parse(input);",
     },
     {
       type: "ERROR",

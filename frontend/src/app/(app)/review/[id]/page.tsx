@@ -14,7 +14,8 @@ interface ReviewItem {
   title: string;
   description: string;
   line: number | null;
-  suggestion: string | null;
+  originalCode: string | null;
+  suggestedCode: string | null;
   resolved: boolean;
 }
 

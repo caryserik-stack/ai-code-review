@@ -56,13 +56,14 @@ model Review {
 // REVIEW ITEM — конкретное замечание
 // ──────────────────────────────────────────
 model ReviewItem {
-  id          String     @id @default(cuid())
-  type        ItemType   // ERROR, WARNING, SUGGESTION
-  title       String     // короткий заголовок
-  description String     // подробное объяснение
-  line        Int?       // номер строки в коде
-  suggestion  String?    // как исправить
-  resolved    Boolean    @default(false)    
+  id            String     @id @default(cuid())
+  type          ItemType   // ERROR, WARNING, SUGGESTION
+  title         String     // короткий заголовок
+  description   String     // подробное объяснение
+  line          Int?       // номер строки в коде
+  originalCode  String?    // код до надо исправить
+  suggestedCode String?    // код после уже исправленный
+  resolved      Boolean    @default(false)    
 
   // Связь с Review (внешний ключ)
   reviewId    String

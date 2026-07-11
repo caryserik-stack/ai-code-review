@@ -14,7 +14,8 @@ type ReviewItem = {
   title: string;
   description: string;
   line: number | null;
-  suggestion: string | null;
+  originalCode: string | null;
+  suggestedCode: string | null;
   resolved: boolean;
 };
 
@@ -53,6 +54,41 @@ const DEFAULT_OPEN_TYPES: ReadonlySet<IssueType> = new Set([
   "ERROR",
   "SECURITY",
 ]);
+
+// Показывает исправление тремя способами в зависимости от того,
+// что реально есть в данных:
+// 1. Есть originalCode И suggestedCode → полноценный diff (было/стало)
+// 2. Есть только suggestedCode → просто "что добавить", без diff
+// 3. Оба пусты → компонент не рендерится вообще (вызывающий код это проверяет)
+type DiffBlockProps = {
+  originalCode: string | null;
+  suggestedCode: string;
+};
+
+function DiffBlock({ originalCode, suggestedCode }: DiffBlockProps) {
+  return (
+    <div className="mt-2 rounded-lg overflow-hidden border border-gray-200 dark:border-border-dark font-mono text-xs">
+      {originalCode && (
+        <div className="flex bg-red-50 dark:bg-red-950/40 px-2 py-1.5">
+          <span className="select-none text-red-500 dark:text-red-400 mr-2 shrink-0">
+            −
+          </span>
+          <code className="text-red-700 dark:text-red-300 break-words">
+            {originalCode}
+          </code>
+        </div>
+      )}
+      <div className="flex bg-green-50 dark:bg-green-950/40 px-2 py-1.5">
+        <span className="select-none text-green-600 dark:text-green-400 mr-2 shrink-0">
+          +
+        </span>
+        <code className="text-green-700 dark:text-green-300 break-words">
+          {suggestedCode}
+        </code>
+      </div>
+    </div>
+  );
+}
 
 type IssueAccordionItemProps = {
   item: ReviewItem;
@@ -190,15 +226,11 @@ function IssueAccordionItem({
               <p className="text-gray-600 dark:text-gray-300 text-sm">
                 {item.description}
               </p>
-              {item.suggestion && (
-                <div className="mt-2 bg-gray-50 dark:bg-surface-dark rounded-lg p-2 border border-gray-200 dark:border-border-dark">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    Suggestion:
-                  </p>
-                  <code className="text-xs text-gray-800 dark:text-gray-200 font-mono break-words">
-                    {item.suggestion}
-                  </code>
-                </div>
+              {item.suggestedCode && (
+                <DiffBlock
+                  originalCode={item.originalCode}
+                  suggestedCode={item.suggestedCode}
+                />
               )}
             </div>
           </motion.div>
