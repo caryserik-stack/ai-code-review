@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Plus, Trash2, LogOut, PanelLeftOpen } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { Plus, Trash2, PanelLeftOpen } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useReviewsStore } from "@/store/reviewsStore";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { SidebarSkeleton } from "@/components/skeletons/SidebarSkeleton";
+import { AccountMenu } from "@/components/layout/AccountMenu";
+import { SettingsModal } from "@/components/settings/SettingsModal";
+import { useSettingsRoute } from "@/hooks/useSettingsRoute";
 
 const DATE_GROUP_LABELS = [
   "Today",
@@ -82,6 +84,9 @@ export function Sidebar({
 
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const accountBtnRef = useRef<HTMLButtonElement>(null);
+  const settings = useSettingsRoute();
 
   const handleLogout = async () => {
     await logout();
@@ -96,18 +101,8 @@ export function Sidebar({
       return sortOrder === "newest" ? diff : -diff;
     });
 
-  // Текст скрываем через opacity + delay, а не условным рендером —
-  // так при схлопывании/раскрытии панели текст плавно растворяется/проявляется,
-  // а не исчезает мгновенно. w-64 фиксирует ширину внутреннего контента,
-  // родительский overflow-hidden в AppLayout обрезает лишнее при анимации.
-  // Раньше здесь стоял delay-200: панель (motion.div, 200мс) успевала
-  // полностью открыться, а текст ещё 200мс просто ждал и только потом
-  // фейдился 150мс — визуально это читалось как "завис, потом дёрнулся".
-  // delay-75 запускает fade почти сразу вместе с ростом ширины, так что
-  // текст проявляется ПОКА панель ещё растёт, и оба заканчиваются почти
-  // одновременно — одна плавная анимация, а не две последовательные.
-  const textCls = `whitespace-nowrap transition-opacity duration-150 ${
-    collapsed ? "opacity-0 pointer-events-none" : "opacity-100 delay-75"
+  const textCls = `whitespace-nowrap ${
+    collapsed ? "opacity-0 pointer-events-none" : "opacity-100"
   }`;
 
   // Фиксированный слот под иконку — 36x36, всегда в одном и том же месте
@@ -127,7 +122,6 @@ export function Sidebar({
           AI Code Review
         </h1>
         <div className="flex items-center gap-1 shrink-0">
-          {!collapsed && <ThemeToggle />}
           <button
             onClick={
               collapsed ? onExpand : showCloseButton ? onNavigate : onCollapse
@@ -223,7 +217,7 @@ export function Sidebar({
             user &&
             groupReviewsByDate(filteredReviews, sortOrder).map((group) => (
               <div key={group.label} className="mb-2">
-                <p className="px-3 pt-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                <p className="px-3 pt-2 pb-1 text-[11px] whitespace-nowrap font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
                   {group.label}
                 </p>
                 {group.items.map((review) => {
@@ -268,18 +262,11 @@ export function Sidebar({
 
       {/* Footer */}
       {user && (
-        <div className="shrink-0 p-3 border-t border-gray-200 dark:border-border-dark space-y-1">
-          <Link
-            href="/profile"
-            onClick={onNavigate}
-            title={
-              collapsed ? (user?.name ?? user?.email ?? "Profile") : undefined
-            }
-            className={`flex items-center py-2 rounded-lg transition-colors ${
-              pathname === "/profile"
-                ? "bg-gray-100 dark:bg-surface-dark text-gray-900 dark:text-gray-100"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-surface-dark"
-            }`}
+        <div className="shrink-0 p-3 border-t border-gray-200 dark:border-border-dark">
+          <button
+            ref={accountBtnRef}
+            onClick={() => setMenuOpen((v) => !v)}
+            className="w-full flex items-center py-2 rounded-lg transition-colors text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-surface-dark"
           >
             <span className={iconSlot}>
               <div className="w-8 h-8 rounded-full bg-orange-400 flex items-center justify-center text-white text-xs font-bold">
@@ -296,20 +283,28 @@ export function Sidebar({
                 {user?.email}
               </p>
             </div>
-          </Link>
-
-          <button
-            onClick={handleLogout}
-            title={collapsed ? "Logout" : undefined}
-            className="w-full flex items-center text-left text-sm text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
-          >
-            <span className={iconSlot}>
-              <LogOut size={16} />
-            </span>
-            <span className={textCls}>Logout</span>
           </button>
+
+          <AccountMenu
+            open={menuOpen}
+            onClose={() => setMenuOpen(false)}
+            anchorRef={accountBtnRef}
+            user={user}
+            onOpenSettings={() => {
+              setMenuOpen(false);
+              settings.open("account");
+            }}
+            onLogout={handleLogout}
+          />
         </div>
       )}
+
+      <SettingsModal
+        open={settings.isOpen}
+        tab={settings.tab}
+        onTabChange={settings.switchTab}
+        onClose={settings.close}
+      />
     </div>
   );
 }

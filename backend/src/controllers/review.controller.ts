@@ -2,7 +2,6 @@ import { Response } from "express";
 import * as reviewService from "../services/review.service";
 import { AuthRequest } from "../types";
 import { prisma } from "../lib/prisma";
-import { createReviewSchema, toggleResolvedSchema } from "../lib/schemas";
 
 export const createReview = async (
   req: AuthRequest,
@@ -26,23 +25,18 @@ export const createReview = async (
       userId: req.userId!,
     });
 
-    const windowStart = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
-
-    const used = await prisma.review.count({
-      where: {
-        userId: req.userId!,
-        createdAt: { gte: windowStart },
-      },
-    });
+    const { remaining, limit } = await reviewService.getReviewUsage(
+      req.userId!,
+    );
 
     res.status(201).json({
       review,
-      remaining: Math.max(0, 5 - used),
-      limit: 5,
+      remaining,
+      limit,
     });
   } catch (error: any) {
     if (error.message === "REVIEW_LIMIT_REACHED") {
-      res.status(400).json({
+      res.status(429).json({
         error: "Review limit reached. You can create up to 5 reviews per hour.",
       });
       return;
@@ -107,21 +101,9 @@ export const getLimits = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const LIMIT = 5;
-    const windowStart = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
+    const usage = await reviewService.getReviewUsage(req.userId!);
 
-    const used = await prisma.review.count({
-      where: {
-        userId: req.userId!,
-        createdAt: { gte: windowStart },
-      },
-    });
-
-    res.status(200).json({
-      used,
-      limit: LIMIT,
-      remaining: Math.max(0, LIMIT - used),
-    });
+    res.status(200).json(usage);
   } catch {
     res.status(500).json({ error: "Internal server error" });
   }

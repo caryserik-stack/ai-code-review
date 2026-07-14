@@ -48,8 +48,16 @@ export const useKeyboardShortcuts = ({
           'input[placeholder="Search reviews..."]',
         );
         if (searchInput) {
-          onToggleSidebar(); // открываем сайдбар если закрыт
-          setTimeout(() => searchInput.focus(), 200); // ждём анимацию
+          searchInput.focus(); // сайдбар и так открыт — просто фокус
+        } else {
+          onToggleSidebar(); // сайдбара нет в DOM — раскрываем и ждём анимацию
+          setTimeout(() => {
+            document
+              .querySelector<HTMLInputElement>(
+                'input[placeholder="Search reviews..."]',
+              )
+              ?.focus();
+          }, 220); // чуть больше длительности анимации (200мс в AppLayout)
         }
         return;
       }

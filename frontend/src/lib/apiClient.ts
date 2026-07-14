@@ -112,11 +112,7 @@ export const reviewApi = {
       throw error;
     }
 
-    return {
-      ...responseData,
-      remaining: Number(response.headers.get("rateLimit-remaining") ?? -1),
-      limit: Number(response.headers.get("rateLimit-limit") ?? -1),
-    };
+    return responseData;
   },
 
   getAll: (cursor?: string) =>

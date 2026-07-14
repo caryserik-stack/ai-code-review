@@ -29,5 +29,5 @@ export const createReviewSchema = z.object({
     .enum(REVIEWER_LEVELS, {
       errorMap: () => ({ message: "Invalid reviewer level" }),
     })
-    .default("middle"),
+    .default("junior"),
 });

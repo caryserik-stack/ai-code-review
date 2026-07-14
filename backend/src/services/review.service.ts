@@ -9,19 +9,28 @@ import type { ReviewerLevel } from "./ai.service";
 const REVIEW_LIMIT = 5;
 const WINDOW_MS = 60 * 60 * 1000;
 
+export const getReviewUsage = async (userId: string) => {
+  const windowStart = new Date(Date.now() - WINDOW_MS);
+  const used = await prisma.review.count({
+    where: {
+      userId,
+      createdAt: { gte: windowStart },
+    },
+  });
+  return {
+    used,
+    limit: REVIEW_LIMIT,
+    remaining: Math.max(0, REVIEW_LIMIT - used),
+  };
+};
+
 export const createReview = async (data: {
   code: string;
   language: string;
   reviewerLevel: ReviewerLevel;
   userId: string;
 }) => {
-  const windowStart = new Date(Date.now() - WINDOW_MS);
-  const used = await prisma.review.count({
-    where: {
-      userId: data.userId,
-      createdAt: { gte: windowStart },
-    },
-  });
+  const { used } = await getReviewUsage(data.userId);
 
   if (used >= REVIEW_LIMIT) {
     throw new Error("REVIEW_LIMIT_REACHED");

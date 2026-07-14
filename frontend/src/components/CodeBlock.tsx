@@ -8,7 +8,7 @@ import { Copy, Check } from "lucide-react";
 interface CodeBlockProps {
   code: string;
   language: string;
-  highlightLine?: number | null; // строка, на которую нужно проскроллить и подсветить
+  highlightLine?: number | null;
 }
 
 const LANGUAGE_MAP: Record<string, string> = {

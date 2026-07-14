@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PROTECTED_PATHS = ["/review", "/profile"];
+const PROTECTED_PATHS = ["/review", "/profile", "/settings"];
 
 const AUTH_PATHS = ["/login", "/register", "/forgot-password"];
 
@@ -32,5 +32,6 @@ export const config = {
     "/login",
     "/register",
     "/forgot-password",
+    "/settings",
   ],
 };

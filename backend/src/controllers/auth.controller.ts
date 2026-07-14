@@ -157,7 +157,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    if (error.message === 'INVALID_EXPIRED') {
+    if (error.message === 'TOKEN_EXPIRED') {
       res.status(400).json({ error: 'Reset link has expired. Please request a new one' })
       return;
     }

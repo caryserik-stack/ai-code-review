@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { EditorView, basicSetup } from "codemirror";
-import { EditorState } from "@codemirror/state";
+import { EditorState, Compartment } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { getLanguageExtension } from "@/lib/languageExtensions";
 
@@ -25,6 +25,7 @@ export function CodeEditor({
 }: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const editableCompartment = useRef(new Compartment()).current;
   // Храним актуальные колбэки в ref, чтобы не пересоздавать EditorView на каждый рендер
   const onChangeRef = useRef(onChange);
   const onPasteRef = useRef(onPaste);
@@ -35,7 +36,7 @@ export function CodeEditor({
   // это отдельное extension, "на лету" его не подменить без пересоздания state)
   useEffect(() => {
     if (!containerRef.current) return;
-
+    
     const state = EditorState.create({
       doc: value,
       extensions: [
@@ -43,7 +44,7 @@ export function CodeEditor({
         oneDark,
         getLanguageExtension(language),
         EditorView.lineWrapping,
-        EditorView.editable.of(!disabled),
+        editableCompartment.of(EditorView.editable.of(!disabled)),
         EditorView.domEventHandlers({
           paste(event) {
             const text = event.clipboardData?.getData("text");
@@ -52,9 +53,7 @@ export function CodeEditor({
           },
         }),
         EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            onChangeRef.current(update.state.doc.toString());
-          }
+          if (update.docChanged) onChangeRef.current(update.state.doc.toString());
         }),
         EditorView.theme({
           "&": { maxHeight: `${maxHeight}px` },
@@ -72,6 +71,12 @@ export function CodeEditor({
     return () => view.destroy();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]); // намеренно не следим за value/disabled здесь — см. следующий useEffect
+
+  useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: editableCompartment.reconfigure(EditorView.editable.of(!disabled)),
+    });
+  }, [disabled])
 
   // Синхронизация внешнего value -> редактор (например, после дропа файла)
   useEffect(() => {

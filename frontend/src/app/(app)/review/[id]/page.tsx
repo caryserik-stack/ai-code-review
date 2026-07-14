@@ -23,7 +23,7 @@ interface Review {
   id: string;
   code: string;
   language: string;
-  revewerLevel: string;
+  reviewerLevel: string;
   status: string;
   score: number | null;
   summary: string | null;
@@ -200,7 +200,6 @@ export default function ReviewPage() {
             code={review.code}
             language={review.language}
             highlightLine={highlightLine}
-            onHighlightDone={() => setHighlightLine(null)}
           />
         </div>
       </main>

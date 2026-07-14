@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useAuthStore } from "@/store/authStore";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ReviewSkeleton } from "@/components/skeletons/ReviewSkeleton";
 
 const container = {
   hidden: {},
@@ -55,8 +56,8 @@ export default function HomePage() {
 
   if (!checked || user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-surface-dark">
-        <p className="text-gray-400 dark:text-gray-500">Loading...</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-surface-dark">
+        <ReviewSkeleton />
       </div>
     );
   }
