@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Check, Copy } from "lucide-react";
 import { reviewApi } from "@/lib/apiClient";
 import { toast } from "sonner";
+import { OWASP_LABELS, SEVERITY_STYLES } from "@/lib/owasp";
 
 type IssueType = "ERROR" | "WARNING" | "SUGGESTION" | "SECURITY";
 
@@ -17,6 +18,8 @@ type ReviewItem = {
   originalCode: string | null;
   suggestedCode: string | null;
   resolved: boolean;
+  owaspCategory: string | null;
+  severity: string | null;
 };
 
 type IssueStyle = {
@@ -194,6 +197,27 @@ function IssueAccordionItem({
             >
               {item.type}
             </span>
+
+            {item.owaspCategory && OWASP_LABELS[item.owaspCategory] && (
+              <span
+                className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-300"
+                title={OWASP_LABELS[item.owaspCategory].label}
+              >
+                OWASP {OWASP_LABELS[item.owaspCategory].code}
+              </span>
+            )}
+
+            {item.severity && SEVERITY_STYLES[item.severity] && (
+              <span
+                className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${SEVERITY_STYLES[item.severity].badge}`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${SEVERITY_STYLES[item.severity].dot}`}
+                />
+                {SEVERITY_STYLES[item.severity].label}
+              </span>
+            )}
+
             {item.line && (
               <span
                 role={onLineClick ? "button" : undefined}
@@ -245,6 +269,13 @@ function IssueAccordionItem({
               <p className="text-gray-600 dark:text-gray-300 text-sm">
                 {item.description}
               </p>
+
+              {item.owaspCategory && OWASP_LABELS[item.owaspCategory] && (
+                <p className="text-xs text-purple-500 dark:text-purple-400 mt-1.5">
+                  {OWASP_LABELS[item.owaspCategory].label} — OWASP Top 10:2021
+                </p>
+              )}
+
               {item.suggestedCode && (
                 <DiffBlock
                   originalCode={item.originalCode}

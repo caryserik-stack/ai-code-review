@@ -1,3 +1,5 @@
+import { OwaspCategory } from "@prisma/client";
+
 // Типы для результата анализа
 export interface ReviewResult {
   summary: string;
@@ -9,6 +11,8 @@ export interface ReviewResult {
     line?: number;
     originalCode?: string;
     suggestedCode?: string;
+    owaspCategory?: OwaspCategory;
+    severity?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   }[];
 }
 
@@ -71,6 +75,8 @@ const MOCK_ITEMS_BY_LEVEL: Record<ReviewerLevel, ReviewResult["items"]> = {
       description: "Consider validating inputs before processing",
       line: 1,
       suggestedCode: "if (!input) throw new Error('Input is required');",
+      owaspCategory: "A04_INSECURE_DESIGN",
+      severity: "MEDIUM",
     },
   ],
   senior: [
@@ -81,6 +87,8 @@ const MOCK_ITEMS_BY_LEVEL: Record<ReviewerLevel, ReviewResult["items"]> = {
         "No validation at the function entry point. In production, unvalidated input at API boundaries is a common source of injection and type-confusion bugs.",
       line: 1,
       suggestedCode: "const parsed = schema.parse(input);",
+      owaspCategory: "A03_INJECTION",
+      severity: "HIGH",
     },
     {
       type: "ERROR",

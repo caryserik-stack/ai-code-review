@@ -17,6 +17,8 @@ interface ReviewItem {
   originalCode: string | null;
   suggestedCode: string | null;
   resolved: boolean;
+  owaspCategory: string | null;
+  severity: string | null;
 }
 
 interface Review {

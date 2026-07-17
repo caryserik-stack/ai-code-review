@@ -4,6 +4,7 @@ type IssueType = "ERROR" | "WARNING" | "SUGGESTION" | "SECURITY";
 
 type ReviewItem = {
   type: IssueType;
+  severity: string | null;
 };
 
 type QualityGateBannerProps = {
@@ -69,6 +70,12 @@ export function QualityGateBanner({ items }: QualityGateBannerProps) {
   const hasBlockingIssues = items.some((item) => BLOCKING_TYPES.has(item.type));
   const total = items.length;
 
+  const criticalSecurityCount = items.filter(
+    (item) =>
+      item.type === "SECURITY" &&
+      (item.severity === "CRITICAL" || item.severity === "HIGH"),
+  ).length;
+
   return (
     <div className="bg-white dark:bg-card-dark p-4 rounded-xl border border-gray-200 dark:border-border-dark">
       {/* Вердикт */}
@@ -105,6 +112,14 @@ export function QualityGateBanner({ items }: QualityGateBannerProps) {
           ),
         )}
       </div>
+
+      {criticalSecurityCount > 0 && (
+        <p className="text-xs text-red-600 dark:text-red-400 font-medium mb-3">
+          ⚠ {criticalSecurityCount} high/critical severity security{" "}
+          {criticalSecurityCount === 1 ? "issue" : "issues"} require immediate
+          attention
+        </p>
+      )}
 
       {/* Пропорциональная полоска — визуально показывает состав issues одним взглядом */}
       <div className="flex h-1.5 rounded-full overflow-hidden bg-gray-100 dark:bg-surface-dark">

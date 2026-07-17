@@ -25,7 +25,7 @@ model User {
   reviews                 Review[]
   passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
-  TeamProfile             TeamProfile?
+  teamProfile             TeamProfile?
 
   @@map("users")
 }
@@ -64,7 +64,10 @@ model ReviewItem {
   line          Int?       // номер строки в коде
   originalCode  String?    // код до надо исправить
   suggestedCode String?    // код после уже исправленный
-  resolved      Boolean    @default(false)    
+  resolved      Boolean    @default(false)
+
+  owaspCategory OwaspCategory?
+  severity      Severity?
 
   // Связь с Review (внешний ключ)
   reviewId    String
@@ -99,6 +102,30 @@ enum ReviewerLevel {
   JUNIOR
   MIDDLE
   SENIOR
+}
+
+
+// ──────────────────────────────────────────
+// OWASP Top 10 (2021) — фиксированный справочник категорий
+// ──────────────────────────────────────────
+enum OwaspCategory {
+  A01_BROKEN_ACCESS_CONTROL
+  A02_CRYPTOGRAPHIC_FAILURES
+  A03_INJECTION
+  A04_INSECURE_DESIGN
+  A05_SECURITY_MISCONFIGURATION
+  A06_VULNERABLE_COMPONENTS
+  A07_AUTH_FAILURES
+  A08_SOFTWARE_DATA_INTEGRITY_FAILURES
+  A09_LOGGING_MONITORING_FAILURES
+  A10_SSRF
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }
 
 // ──────────────────────────────────────────
