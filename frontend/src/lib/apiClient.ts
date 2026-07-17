@@ -132,3 +132,12 @@ export const reviewApi = {
       body: JSON.stringify({ resolved }),
     }),
 };
+
+export const teamProfileApi = {
+  get: () => request("team-profile"),
+  update: (data: { rules: string[] }) =>
+    request("team-profile", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+};

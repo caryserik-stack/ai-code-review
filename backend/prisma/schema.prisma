@@ -22,9 +22,10 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  reviews              Review[]
-  passwordResetTokens  PasswordResetToken[]
+  reviews                 Review[]
+  passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
+  TeamProfile             TeamProfile?
 
   @@map("users")
 }
@@ -130,4 +131,18 @@ model EmailVerificationToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("email_verification_tokens")
+}
+
+// ──────────────────────────────────────────
+// TEAM STANDARDS PROFILE
+// ──────────────────────────────────────────
+
+model TeamProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rules     String[] @default([])
+  updatedAt DateTime @updatedAt
+
+  @@map("team_profiles")
 }

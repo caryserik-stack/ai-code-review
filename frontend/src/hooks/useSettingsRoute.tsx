@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export type SettingsTab = "account" | "general";
+export type SettingsTab = "account" | "general" | "rules";
 
 const FALLBACK_PATH = "/review/new";
 
@@ -29,7 +29,9 @@ export function useSettingsRoute() {
 
   const isOpen = path.startsWith("/settings");
   const tab: SettingsTab = path.startsWith("/settings/general")
-    ? "general"
+  ? "general"
+  : path.startsWith("/settings/rules")
+    ? "rules"
     : "account";
 
   // Синхронизируем path с РЕАЛЬНЫМ location при popstate (кнопки

@@ -2,8 +2,9 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRouter from "./routes/auth.routes";
-import cookieParser from "cookie-parser";
 import reviewRouter from "./routes/review.routes";
+import teamProfileRouter from "./routes/teamProfile.routes";
+import cookieParser from "cookie-parser";
 import { errorMiddleware } from "./middleware/error.middleware";
 import {
   globalLimiter,
@@ -56,6 +57,8 @@ app.use("/api/auth/forgot-password", forgotPasswordLimiter);
 app.use("/api/auth", authRouter);
 
 app.use("/api/reviews", reviewRouter);
+
+app.use("/api/team-profile", teamProfileRouter);
 
 app.use(errorMiddleware);
 

@@ -32,9 +32,11 @@ export const createReview = async (data: {
 }) => {
   const { used } = await getReviewUsage(data.userId);
 
-  if (used >= REVIEW_LIMIT) {
-    throw new Error("REVIEW_LIMIT_REACHED");
-  }
+  if (used >= REVIEW_LIMIT) throw new Error("REVIEW_LIMIT_REACHED");
+
+  const teamProfile = await prisma.teamProfile.findUnique({
+    where: { userId: data.userId },
+  })
 
   // Шаг 1 — создаём запись со статусом PROCESSING
   const review = await prisma.review.create({
@@ -53,6 +55,7 @@ export const createReview = async (data: {
       data.code,
       data.language,
       data.reviewerLevel,
+      teamProfile?.rules ?? [],
     );
 
     // Шаг 3 — сохраняем результат

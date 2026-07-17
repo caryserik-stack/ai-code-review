@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { FileUp } from "lucide-react";
+import { FileUp, ListChecks } from "lucide-react";
 import { InlineSelect } from "./InlineSelect";
+import { TeamRulesPanel } from "./TeamRulesPanel";
 
 type CodeToolbarProps = {
   language: string;
@@ -35,6 +36,7 @@ export function CodeToolbar({
   const [openPicker, setOpenPicker] = useState<"language" | "level" | null>(
     null,
   );
+  const [rulesPanelOpen, setRulesPanelOpen] = useState(false);
 
   return (
     <div className="flex items-center justify-between gap-2 mb-2">
@@ -94,7 +96,18 @@ export function CodeToolbar({
           <FileUp className="w-3.5 h-3.5" />
           <span className="hidden md:inline">or choose a file</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setRulesPanelOpen(true)}
+          className="flex items-center gap-1.5 text-xs font-mono px-2 py-1 rounded bg-gray-100 dark:bg-surface-dark text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+        >
+          <ListChecks size={13} />
+          Rules
+        </button>
       </div>
+
+      <TeamRulesPanel open={rulesPanelOpen} onClose={() => setRulesPanelOpen(false)} />
     </div>
   );
 }

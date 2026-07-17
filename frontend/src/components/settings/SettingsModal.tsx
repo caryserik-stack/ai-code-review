@@ -3,7 +3,15 @@
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, User as UserIcon, Palette } from "lucide-react";
+import {
+  X,
+  User as UserIcon,
+  Palette,
+  ListChecks,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { teamProfileApi } from "@/lib/apiClient";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuthStore } from "@/store/authStore";
 import { authApi } from "@/lib/apiClient";
@@ -21,6 +29,7 @@ interface Props {
 const TABS = [
   { id: "account" as const, label: "Profile", icon: UserIcon },
   { id: "general" as const, label: "Appearance", icon: Palette },
+  { id: "rules" as const, label: "Review Rules", icon: ListChecks },
 ];
 
 const profileSchema = z.object({
@@ -58,6 +67,41 @@ export function SettingsModal({ open, tab, onTabChange, onClose }: Props) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
+
+  const [rules, setRules] = useState<string[]>([]);
+  const [newRule, setNewRule] = useState("");
+  const [rulesLoading, setRulesLoading] = useState(false);
+  const [rulesSaving, setRulesSaving] = useState(false);
+
+  useEffect(() => {
+    if (open && tab === "rules") {
+      setRulesLoading(true);
+      teamProfileApi
+        .get()
+        .then((data) => setRules(data.profile.rules))
+        .catch(() => toast.error("Failed to load review rules"))
+        .finally(() => setRulesLoading(false));
+    }
+  }, [open, tab]);
+
+  const saveRules = async (nextRules: string[]) => {
+    setRulesSaving(true);
+    try {
+      await teamProfileApi.update({ rules: nextRules });
+      setRules(nextRules);
+    } catch {
+      toast.error("Failed to save rule");
+    } finally {
+      setRulesSaving(false);
+    }
+  };
+
+  const handleAddRule = () => {
+    const trimmed = newRule.trim();
+    if (!trimmed || rules.length >= 20) return;
+    saveRules([...rules, trimmed]);
+    setNewRule("");
+  };
 
   useEffect(() => {
     if (open && user) {
@@ -133,6 +177,10 @@ export function SettingsModal({ open, tab, onTabChange, onClose }: Props) {
     } finally {
       setPasswordLoading(false);
     }
+  };
+
+  const handleRemoveRule = (index: number) => {
+    saveRules(rules.filter((_, i) => i !== index));
   };
 
   if (typeof document === "undefined") return null;
@@ -345,6 +393,80 @@ export function SettingsModal({ open, tab, onTabChange, onClose }: Props) {
                       </div>
                       <ThemeToggle />
                     </div>
+                  </div>
+                )}
+
+                {tab === "rules" && (
+                  <div className="max-w-md space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Custom review rules
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                        Describe team-specific conventions the AI should check
+                        for (e.g. &quot;no any in TypeScript&quot;, &quot;all
+                        API inputs must use Zod&quot;).
+                      </p>
+                    </div>
+
+                    {rulesLoading ? (
+                      <p className="text-sm text-gray-400 dark:text-gray-500">
+                        Loading...
+                      </p>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          {rules.map((rule, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-surface-dark border border-gray-200 dark:border-border-dark rounded-lg px-3 py-2"
+                            >
+                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                                {rule}
+                              </span>
+                              <button
+                                onClick={() => handleRemoveRule(index)}
+                                disabled={rulesSaving}
+                                className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors flex-shrink-0"
+                                aria-label="Remove rule"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          ))}
+                          {rules.length === 0 && (
+                            <p className="text-sm text-gray-400 dark:text-gray-500">
+                              No custom rules yet
+                            </p>
+                          )}
+                        </div>
+
+                        {rules.length < 20 && (
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={newRule}
+                              onChange={(e) => setNewRule(e.target.value)}
+                              onKeyDown={(e) =>
+                                e.key === "Enter" &&
+                                (e.preventDefault(), handleAddRule())
+                              }
+                              placeholder="e.g. All exported functions must have JSDoc"
+                              maxLength={200}
+                              className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-border-dark bg-gray-50 dark:bg-surface-dark text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                            <button
+                              onClick={handleAddRule}
+                              disabled={rulesSaving || !newRule.trim()}
+                              className="bg-blue-600 text-white px-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex-shrink-0"
+                              aria-label="Add rule"
+                            >
+                              <Plus size={16} />
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
               </div>

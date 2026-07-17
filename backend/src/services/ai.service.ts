@@ -110,13 +110,17 @@ const MOCK_SCORE_BY_LEVEL: Record<ReviewerLevel, number> = {
 export const analyzeCode = async (
   code: string,
   language: string,
-  reviewerLevel: ReviewerLevel = "middle",
+  reviewerLevel: ReviewerLevel = "junior",
+  customRules: string[] = [],
 ): Promise<ReviewResult> => {
   // Имитируем задержку AI (1 секунда)
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
   return {
-    summary: `Mock ${reviewerLevel}-level analysis of ${language} code. ${code.length} characters analyzed.`,
+    summary:
+      customRules.length > 0
+        ? `Mock ${reviewerLevel}-level analysis of ${language} code, checked against ${customRules.length} custom team rule(s). ${code.length} characters analyzed.`
+        : `Mock ${reviewerLevel}-level analysis of ${language} code. ${code.length} characters analyzed.`,
     score: MOCK_SCORE_BY_LEVEL[reviewerLevel],
     items: MOCK_ITEMS_BY_LEVEL[reviewerLevel],
   };
