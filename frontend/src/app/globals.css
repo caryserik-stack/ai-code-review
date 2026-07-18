@@ -24,3 +24,12 @@ html {
 html::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Edge */
 }
+
+@media print {
+  body {
+    background: white !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+}

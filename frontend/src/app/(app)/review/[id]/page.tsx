@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, cache } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { reviewApi } from "@/lib/apiClient";
 import { ReviewSkeleton } from "@/components/skeletons/ReviewSkeleton";
 import { CodeBlock } from "@/components/CodeBlock";
 import { IssueAccordion } from "@/components/review/IssueAccordion";
 import { QualityGateBanner } from "@/components/review/QualityGateBanner";
+import { Download, FileText, ChevronDown } from "lucide-react";
+import { useReviewsStore } from "@/store/reviewsStore";
 
 interface ReviewItem {
   id: string;
@@ -35,9 +38,28 @@ interface Review {
 
 export default function ReviewPage() {
   const params = useParams();
-  const [review, setReview] = useState<Review | null>(null);
-  const [loading, setLoading] = useState(true);
+  const reviewId = params.id as string;
+  const cachedReview = useReviewsStore((state) => state.reviewCache[reviewId]);
+  const cacheReview = useReviewsStore((state) => state.cacheReview);
+
+  const [review, setReview] = useState<Review | null>(cachedReview ?? null);
+  const [loading, setLoading] = useState(!cacheReview);
   const [highlightLine, setHighlightLine] = useState<number | null>(null);
+
+  const [exportOpen, setExportOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadMarkdown = async () => {
+    setExportOpen(false);
+    setDownloading(true);
+    try {
+      await reviewApi.downloadReport(review!.id);
+    } catch {
+      toast.error("Failed to download report");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const handleLineClick = (line: number) => {
     setHighlightLine(null);
@@ -47,18 +69,26 @@ export default function ReviewPage() {
   };
 
   useEffect(() => {
+    const cached = useReviewsStore.getState().reviewCache[reviewId];
+    setReview(cached ?? null);
+    setLoading(!cached);
+    fetchReview(!cached);
+  }, [reviewId]);
+
+  useEffect(() => {
     fetchReview();
   }, [params.id]);
 
-  const fetchReview = async () => {
-    setLoading(true);
+  const fetchReview = async (showSkeleton: boolean) => {
+    if (showSkeleton) setLoading(true);
     try {
-      const data = await reviewApi.getById(params.id as string);
+      const data = await reviewApi.getById(reviewId);
       setReview(data.review);
+      cacheReview(data.review);
     } catch (err) {
-      setReview(null);
+      if (showSkeleton) setReview(null);
     } finally {
-      setLoading(false);
+      if (showSkeleton) setLoading(false);
     }
   };
 
@@ -68,8 +98,9 @@ export default function ReviewPage() {
 
     const interval = setInterval(async () => {
       try {
-        const data = await reviewApi.getById(params.id as string);
+        const data = await reviewApi.getById(reviewId);
         setReview(data.review);
+        cacheReview(data.review);
         if (
           data.review.status === "COMPLETED" ||
           data.review.status === "FAILED"
@@ -82,7 +113,7 @@ export default function ReviewPage() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [review?.status, params.id]);
+  }, [review?.status, reviewId]);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600 dark:text-green-400";
@@ -136,6 +167,38 @@ export default function ReviewPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-surface-dark">
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+        <div className="flex justify-end relative">
+          <button
+            onClick={() => setExportOpen((v) => !v)}
+            className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-card-dark border border-gray-200 dark:border-border-dark rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-surface-dark transition-colors"
+          >
+            <Download size={14} />
+            Export
+            <ChevronDown size={14} />
+          </button>
+
+          {exportOpen && (
+            <div className="absolute right-0 top-full mt-1 bg-white dark:bg-card-dark border border-gray-200 dark:border-border-dark rounded-lg shadow-lg py-1 z-10 min-w-[160px]">
+              <button
+                onClick={handleDownloadMarkdown}
+                disabled={downloading}
+                className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-surface-dark disabled:opacity-50"
+              >
+                <FileText size={14} />
+                Markdown (.md)
+              </button>
+              <Link
+                href={`/review/${review!.id}/report`}
+                onClick={() => setExportOpen(false)}
+                className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-surface-dark"
+              >
+                <Download size={14} />
+                PDF (Print)
+              </Link>
+            </div>
+          )}
+        </div>
+
         {/* Score карточка */}
         <div className="bg-white dark:bg-card-dark p-6 rounded-xl border border-gray-200 dark:border-border-dark">
           <div className="flex justify-between items-start gap-4">
@@ -187,9 +250,12 @@ export default function ReviewPage() {
           items={review.items}
           onLineClick={handleLineClick}
           onItemsChange={(updatedItems) => {
-            setReview((prev) =>
-              prev ? { ...prev, items: updatedItems } : prev,
-            );
+            setReview((prev) => {
+              if (!prev) return prev;
+              const next = { ...prev, items: updatedItems };
+              cacheReview(next);
+              return next;
+            });
           }}
         />
 

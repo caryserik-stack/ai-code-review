@@ -7,6 +7,18 @@ interface ReviewListItem {
   createdAt: string;
 }
 
+interface FullReview {
+  id: string;
+  code: string;
+  language: string;
+  reviewerLevel: string;
+  status: string;
+  score: number | null;
+  summary: string | null;
+  createdAt: string;
+  items: any[];
+}
+
 interface ReviewsStore {
   reviews: ReviewListItem[];
   loaded: boolean;
@@ -16,11 +28,13 @@ interface ReviewsStore {
   remaining: number;
   limit: number;
   totalCount: number;
+  reviewCache: Record<string, FullReview>;
   fetchReviews: () => Promise<void>;
   loadMore: () => Promise<void>;
   addReview: (review: ReviewListItem) => void;
   removeReview: (id: string) => void;
   setRateLimit: (remaining: number, limit: number) => void;
+  cacheReview: (review: FullReview) => void;
 }
 
 export const useReviewsStore = create<ReviewsStore>((set, get) => ({
@@ -32,6 +46,7 @@ export const useReviewsStore = create<ReviewsStore>((set, get) => ({
   remaining: -1,
   limit: -1,
   totalCount: 0,
+  reviewCache: {},
 
   fetchReviews: async () => {
     try {
@@ -88,5 +103,11 @@ export const useReviewsStore = create<ReviewsStore>((set, get) => ({
 
   setRateLimit: (remaining: number, limit: number) => {
     set({ remaining, limit });
+  },
+
+  cacheReview: (review) => {
+    set((state) => ({
+      reviewCache: { ...state.reviewCache, [review.id]: review },
+    }));
   },
 }));

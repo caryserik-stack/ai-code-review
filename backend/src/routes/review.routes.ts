@@ -3,6 +3,7 @@ import * as reviewController from '../controllers/review.controller'
 import { authMiddleware } from '../middleware/auth.middleware'
 import { validate } from '../services/validate.middleware'
 import { createReviewSchema, toggleResolvedSchema } from '../lib/schemas'
+import * as reportController from '../controllers/report.controller'
 
 const router = Router()
 
@@ -13,6 +14,8 @@ router.get('/', authMiddleware, reviewController.getReviews)
 router.get('/count', authMiddleware, reviewController.getReviewsCount)
 router.get('/:id', authMiddleware, reviewController.getReviewById)
 router.delete('/:id', authMiddleware, reviewController.deleteReview)
+
+router.get('/:id/report', authMiddleware, reportController.getReviewReport)
 
 router.patch('/items/:itemId/resolve', authMiddleware, validate(toggleResolvedSchema), reviewController.toggleItemResolved)
 

@@ -131,6 +131,24 @@ export const reviewApi = {
       method: "PATCH",
       body: JSON.stringify({ resolved }),
     }),
+
+  downloadReport: async (id: string) => {
+    const response = await fetch(`${API_URL}/api/reviews/${id}/report`, {
+      credentials: "include",
+    });
+    if (!response.ok) {
+      throw new Error("Failed to generate report");
+    }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `review-${id}.md`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };
 
 export const teamProfileApi = {
