@@ -4,6 +4,8 @@ import { authMiddleware } from '../middleware/auth.middleware'
 import { validate } from '../services/validate.middleware'
 import { createReviewSchema, toggleResolvedSchema } from '../lib/schemas'
 import * as reportController from '../controllers/report.controller'
+import * as chatController from '../controllers/chat.controller'
+import { sendChatMessageSchema } from '../lib/schemas'
 
 const router = Router()
 
@@ -18,5 +20,8 @@ router.delete('/:id', authMiddleware, reviewController.deleteReview)
 router.get('/:id/report', authMiddleware, reportController.getReviewReport)
 
 router.patch('/items/:itemId/resolve', authMiddleware, validate(toggleResolvedSchema), reviewController.toggleItemResolved)
+
+router.get('/:id/chat', authMiddleware, chatController.getChatHistory)
+router.post('/:id/chat', authMiddleware, validate(sendChatMessageSchema), chatController.sendChatMessage)
 
 export default router

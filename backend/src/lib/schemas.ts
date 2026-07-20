@@ -60,3 +60,10 @@ export const teamProfileSchema = z.object({
     )
     .max(MAX_RULES, `Too many rules (max ${MAX_RULES})`),
 });
+
+export const sendChatMessageSchema = z.object({
+  content: z
+    .string()
+    .min(1, "Message cannot be empty")
+    .max(2000, "Message too long (max 2000 characters)"),
+});

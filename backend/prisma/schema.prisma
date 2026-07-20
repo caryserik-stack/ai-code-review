@@ -45,10 +45,11 @@ model Review {
   updatedAt     DateTime     @updatedAt
   deletedAt     DateTime?
 
-  userId    String
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  items     ReviewItem[]
+  items         ReviewItem[]
+  chatMessages  ChatMessage[]
 
   @@map("reviews")
 }
@@ -105,9 +106,9 @@ enum ReviewerLevel {
 }
 
 
-// ──────────────────────────────────────────
-// OWASP Top 10 (2021) — фиксированный справочник категорий
-// ──────────────────────────────────────────
+      // ──────────────────────────────────────────
+      // OWASP Top 10 (2021) — фиксированный справочник категорий
+      // ──────────────────────────────────────────
 enum OwaspCategory {
   A01_BROKEN_ACCESS_CONTROL
   A02_CRYPTOGRAPHIC_FAILURES
@@ -126,6 +127,11 @@ enum Severity {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
 }
 
 // ──────────────────────────────────────────
@@ -172,4 +178,20 @@ model TeamProfile {
   updatedAt DateTime @updatedAt
 
   @@map("team_profiles")
+}
+
+// ──────────────────────────────────────────
+// CHAT MESSAGE
+// ──────────────────────────────────────────
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  role      ChatRole
+  content   String
+  createdAt DateTime @default(now())
+
+  reviewId String
+  review   Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
 }

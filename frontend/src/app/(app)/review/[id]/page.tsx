@@ -8,8 +8,9 @@ import { ReviewSkeleton } from "@/components/skeletons/ReviewSkeleton";
 import { CodeBlock } from "@/components/CodeBlock";
 import { IssueAccordion } from "@/components/review/IssueAccordion";
 import { QualityGateBanner } from "@/components/review/QualityGateBanner";
-import { Download, FileText, ChevronDown } from "lucide-react";
+import { Download, FileText, ChevronDown, MessageSquare } from "lucide-react";
 import { useReviewsStore } from "@/store/reviewsStore";
+import { ReviewChatPanel } from "@/components/review/ReviewChatPanel";
 
 interface ReviewItem {
   id: string;
@@ -48,6 +49,8 @@ export default function ReviewPage() {
 
   const [exportOpen, setExportOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
+
+  const [chatOpen, setChatOpen] = useState(false);
 
   const handleDownloadMarkdown = async () => {
     setExportOpen(false);
@@ -167,7 +170,15 @@ export default function ReviewPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-surface-dark">
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-        <div className="flex justify-end relative">
+        <div className="flex justify-end gap-2 relative">
+          <button
+            onClick={() => setChatOpen(true)}
+            className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-card-dark border border-gray-200 dark:border-border-dark rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-surface-dark transition-colors"
+          >
+            <MessageSquare size={14} />
+            Ask AI
+          </button>
+
           <button
             onClick={() => setExportOpen((v) => !v)}
             className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-card-dark border border-gray-200 dark:border-border-dark rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-surface-dark transition-colors"
@@ -259,6 +270,11 @@ export default function ReviewPage() {
           }}
         />
 
+        <ReviewChatPanel
+          reviewId={review.id}
+          open={chatOpen}
+          onClose={() => setChatOpen(false)}
+        />
         {/* Исходный код */}
         <div className="bg-white dark:bg-card-dark p-4 rounded-xl border border-gray-200 dark:border-border-dark">
           <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">

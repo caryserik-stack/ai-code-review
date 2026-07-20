@@ -149,6 +149,16 @@ export const reviewApi = {
     a.remove();
     window.URL.revokeObjectURL(url);
   },
+
+  // frontend/src/lib/apiClient.ts — добавить в reviewApi
+
+  getChatHistory: (id: string) => request(`/reviews/${id}/chat`),
+
+  sendChatMessage: (id: string, content: string) =>
+    request(`/reviews/${id}/chat`, {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    }),
 };
 
 export const teamProfileApi = {
