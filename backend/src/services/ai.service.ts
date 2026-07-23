@@ -24,6 +24,15 @@ export const REVIEWER_LEVEL_TO_PRISMA = {
   senior: "SENIOR",
 } as const;
 
+export const REVIEWER_LEVEL_FROM_PRISMA: Record<
+  "JUNIOR" | "MIDDLE" | "SENIOR",
+  ReviewerLevel
+> = {
+  JUNIOR: "junior",
+  MIDDLE: "middle",
+  SENIOR: "senior",
+};
+
 // Наборы моковых issues под каждый уровень —
 // имитируем, что junior-ревью более подробное и обучающее,
 // а senior-ревью фокусируется на архитектуре и безопасности

@@ -4,7 +4,11 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { reviewApi } from "@/lib/apiClient";
 import { useReviewsStore } from "@/store/reviewsStore";
-import { createReviewSchema, MAX_CODE_LENGTH, REVIEWER_LEVELS } from "@/lib/validation/review";
+import {
+  createReviewSchema,
+  MAX_CODE_LENGTH,
+  REVIEWER_LEVELS,
+} from "@/lib/validation/review";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
 import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
@@ -19,7 +23,6 @@ import {
 } from "@/components/review/StatusBanners";
 import { Loader2, Sparkles, UploadCloud } from "lucide-react";
 
-
 type ReviewerLevel = (typeof REVIEWER_LEVELS)[number];
 const LANGUAGE_OPTIONS = Object.keys(LANGUAGE_EXTENSIONS);
 
@@ -31,6 +34,7 @@ export default function NewReviewForm() {
   const [loading, setLoading] = useState(false);
 
   const addReview = useReviewsStore((state) => state.addReview);
+  const cacheReview = useReviewsStore((state) => state.cacheReview);
   const setRateLimit = useReviewsStore((state) => state.setRateLimit);
   const remaining = useReviewsStore((state) => state.remaining);
   const limit = useReviewsStore((state) => state.limit);
@@ -77,24 +81,30 @@ export default function NewReviewForm() {
     setLoading(true);
 
     try {
+      const start = Date.now();
       const data = await reviewApi.create(result.data);
       addReview({
         id: data.review.id,
         language: data.review.language,
         createdAt: data.review.createdAt,
       });
+      cacheReview(data.review);
 
       if (data.remaining !== -1) {
         setRateLimit(data.remaining, data.limit);
       }
 
-      toast.success("Review created");
+      const elapsed = Date.now() - start;
+      const minDelay = 400;
+      if (elapsed < minDelay) {
+        await new Promise((resolve) => setTimeout(resolve, minDelay - elapsed));
+      }
+
       router.push(`/review/${data.review.id}`);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Network error. Please try again.";
       toast.error(message);
-    } finally {
       setLoading(false);
     }
   }, [code, language, reviewerLevel, loading, addReview, router, setRateLimit]);

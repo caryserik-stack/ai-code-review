@@ -32,3 +32,12 @@ export const forgotPasswordLimiter = rateLimit({
     error: "Too many password reset attempts, please try again in an hour.",
   },
 });
+
+export const verifyCodeLimiter = rateLimit({
+  ...baseConfig,
+  windowMs: 15 * 60 * 1000,
+  max: isDev ? 100 : 10,
+  message: {
+    error: "Too many verification attempts, please try again in 15 minutes.",
+  },
+});

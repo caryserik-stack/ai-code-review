@@ -1,7 +1,13 @@
 // backend/src/services/chat.service.ts
 import { prisma } from "../lib/prisma";
 
-export const getChatHistory = async (reviewId: string, userId: string) => {
+const CHAT_MESSAGES_PER_PAGE = 50;
+
+export const getChatHistory = async (
+  reviewId: string,
+  userId: string,
+  cursor?: string,
+) => {
   // Проверяем, что ревью принадлежит пользователю — тот же паттерн
   // авторизации, что и в toggleItemResolved
   const review = await prisma.review.findFirst({
@@ -9,10 +15,18 @@ export const getChatHistory = async (reviewId: string, userId: string) => {
   });
   if (!review) throw new Error("REVIEW_NOT_FOUND");
 
-  return prisma.chatMessage.findMany({
+  const messages = await prisma.chatMessage.findMany({
     where: { reviewId },
     orderBy: { createdAt: "asc" },
+    take: CHAT_MESSAGES_PER_PAGE + 1,
+    ...(cursor && { cursor: { id: cursor }, skip: 1 }),
   });
+
+  const hasMore = messages.length > CHAT_MESSAGES_PER_PAGE; 
+  const items = hasMore ? messages.slice(0, CHAT_MESSAGES_PER_PAGE) : messages;
+  const nextCursor = hasMore ? items[items.length - 1].id : null;
+
+  return { messages: items, nextCursor };
 };
 
 // Mock-генератор ответа — имитирует ответ AI, видящего весь код и issues

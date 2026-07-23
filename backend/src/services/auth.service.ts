@@ -3,6 +3,10 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 import { sendPasswordResetEmail } from "./email.service";
 import { sendVerificationEmail } from "./email.service";
+import { createHash } from "crypto";
+
+const hashCode = (code: string) =>
+  createHash("sha256").update(code).digest("hex");
 // ──────────────────────────────────────────
 // ТИПЫ
 // ──────────────────────────────────────────
@@ -75,10 +79,10 @@ export const register = async (input: RegisterInput) => {
 
   await prisma.emailVerificationToken.deleteMany({
     where: { userId: user.id },
-  })
+  });
 
   await prisma.emailVerificationToken.create({
-    data: { code, userId: user.id, expiresAt },
+    data: { codeHash: hashCode(code), userId: user.id, expiresAt },
   });
 
   await sendVerificationEmail(email, code);
@@ -204,24 +208,27 @@ export const forgotPassword = async (email: string) => {
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
   await prisma.passwordResetToken.create({
-    data: { token: code, userId: user.id, expiresAt },
+    data: { codeHash: hashCode(code), userId: user.id, expiresAt },
   });
 
-  await sendPasswordResetEmail(email, code);
+  await sendPasswordResetEmail(email, code); // в письмо идёт исходный код, не хеш
 };
 
 // ──────────────────────────────────────────
 // RESET PASSWORD
 // ──────────────────────────────────────────
 export const resetPassword = async (code: string, newPassword: string) => {
-  const resetToken = await prisma.passwordResetToken.findUnique({
-    where: { token: code },
+  const codeHash = hashCode(code);
+
+  const resetToken = await prisma.passwordResetToken.findFirst({
+    where: { codeHash },
+    orderBy: { createdAt: "desc" },
   });
 
   if (!resetToken) throw new Error("INVALID_TOKEN");
 
   if (resetToken.expiresAt < new Date()) {
-    await prisma.passwordResetToken.delete({ where: { token: code } });
+    await prisma.passwordResetToken.delete({ where: { id: resetToken.id } });
     throw new Error("TOKEN_EXPIRED");
   }
 
@@ -232,27 +239,38 @@ export const resetPassword = async (code: string, newPassword: string) => {
     data: { password: hashedPassword },
   });
 
-  await prisma.passwordResetToken.delete({ where: { token: code } });
+  await prisma.passwordResetToken.delete({ where: { id: resetToken.id } });
 };
 
 // ──────────────────────────────────────────
 // VERIFY CODE
 // ──────────────────────────────────────────
 export const verifyResetCode = async (email: string, code: string) => {
-  const resetToken = await prisma.passwordResetToken.findUnique({
-    where: { token: code },
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) throw new Error("Invalid_code");
+
+  const resetToken = await prisma.passwordResetToken.findFirst({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
   });
 
   if (!resetToken) throw new Error("Invalid_code");
+
   if (resetToken.expiresAt < new Date()) {
-    await prisma.passwordResetToken.delete({ where: { token: code } });
+    await prisma.passwordResetToken.delete({ where: { id: resetToken.id } });
     throw new Error("Code has expired. Please request a new one.");
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: resetToken.userId },
-  });
-  if (!user || user.email !== email) throw new Error("Invalid_code");
+  if (resetToken.codeHash !== hashCode(code)) {
+    const updated = await prisma.passwordResetToken.update({
+      where: { id: resetToken.id },
+      data: { attempts: { increment: 1 } },
+    });
+    if (updated.attempts >= 5) {
+      await prisma.passwordResetToken.delete({ where: { id: resetToken.id } });
+    }
+    throw new Error("Invalid_code");
+  }
 };
 
 // ──────────────────────────────────────────
@@ -261,7 +279,7 @@ export const verifyResetCode = async (email: string, code: string) => {
 
 export const verifyEmail = async (userId: string, code: string) => {
   const verificationToken = await prisma.emailVerificationToken.findFirst({
-    where: { userId, code },
+    where: { userId },
     orderBy: { createdAt: "desc" },
   });
 
@@ -274,6 +292,17 @@ export const verifyEmail = async (userId: string, code: string) => {
     throw new Error("CODE_EXPIRED");
   }
 
+  if (verificationToken.codeHash !== hashCode(code)) {
+    const updated = await prisma.emailVerificationToken.update({
+      where: { id: verificationToken.id },
+      data: { attempts: { increment: 1 } },
+    });
+    if (updated.attempts >= 5) {
+      await prisma.emailVerificationToken.deleteMany({ where: { userId } });
+    }
+    throw new Error("INVALID_CODE");
+  }
+
   await prisma.user.update({
     where: { id: userId },
     data: { emailVerified: true },
@@ -282,14 +311,11 @@ export const verifyEmail = async (userId: string, code: string) => {
   await prisma.emailVerificationToken.deleteMany({ where: { userId } });
 };
 
+// ──────────────────────────────────────────
+// RESEND VERIFICATION
+// ──────────────────────────────────────────
 export const resendVerificationCode = async (userId: string) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  console.log(
-    "resend: user found:",
-    user?.email,
-    "verified:",
-    user?.emailVerified,
-  );
 
   if (!user) throw new Error("USER_NOT_FOUND");
   if (user.emailVerified) throw new Error("ALREADY_VERIFIED");
@@ -300,10 +326,8 @@ export const resendVerificationCode = async (userId: string) => {
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
   await prisma.emailVerificationToken.create({
-    data: { code, userId, expiresAt },
+    data: { codeHash: hashCode(code), userId, expiresAt },
   });
 
-  console.log("resend: sending email to", user.email, "with code", code);
   await sendVerificationEmail(user.email, code);
-  console.log("resend: email sent successfully");
 };

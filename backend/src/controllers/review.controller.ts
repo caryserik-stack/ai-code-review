@@ -18,7 +18,7 @@ export const createReview = async (
       return;
     }
 
-    const review = await reviewService.createReview({
+    const review = await reviewService.enqueueReview({
       code,
       language,
       reviewerLevel,

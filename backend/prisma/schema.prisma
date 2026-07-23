@@ -34,23 +34,28 @@ model User {
 // REVIEW
 // ──────────────────────────────────────────
 model Review {
-  id            String       @id @default(cuid())
-  code          String
-  language      String
-  reviewerLevel ReviewerLevel @default(JUNIOR)
-  status        ReviewStatus @default(PENDING)
-  summary       String?
-  score         Int?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  deletedAt     DateTime?
+  id                  String        @id @default(cuid())
+  code                String
+  language            String
+  reviewerLevel       ReviewerLevel @default(JUNIOR)
+  status              ReviewStatus  @default(PENDING)
+  failureReason       String?
+  attempts            Int           @default(0)
+  processingStartedAt DateTime?
+  summary             String?
+  score               Int?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  deletedAt           DateTime?
 
-  userId        String
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  items         ReviewItem[]
-  chatMessages  ChatMessage[]
+  items        ReviewItem[]
+  chatMessages ChatMessage[]
 
+  @@index([userId, createdAt])
+  @@index([status, processingStartedAt])
   @@map("reviews")
 }
 
@@ -74,6 +79,8 @@ model ReviewItem {
   reviewId    String
   review      Review     @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
+  @@index([reviewId, type])
+  @@index([reviewId, severity])
   @@map("review_items")
 }
 
@@ -106,9 +113,9 @@ enum ReviewerLevel {
 }
 
 
-      // ──────────────────────────────────────────
-      // OWASP Top 10 (2021) — фиксированный справочник категорий
-      // ──────────────────────────────────────────
+  // ──────────────────────────────────────────
+  // OWASP Top 10 (2021) — фиксированный справочник категорий
+  // ──────────────────────────────────────────
 enum OwaspCategory {
   A01_BROKEN_ACCESS_CONTROL
   A02_CRYPTOGRAPHIC_FAILURES
@@ -140,15 +147,17 @@ enum ChatRole {
 
 model PasswordResetToken {
   id        String   @id @default(cuid())
-  token     String   @unique
+  codeHash  String
   userId    String
+  attempts  Int      @default(0)
   expiresAt DateTime
   createdAt DateTime @default(now())
-
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("password_reset_tokens")
 }
+
 
 // ──────────────────────────────────────────
 // EMAIL-VERIFICATION
@@ -156,13 +165,14 @@ model PasswordResetToken {
 
 model EmailVerificationToken {
   id        String   @id @default(cuid())
-  code      String
+  codeHash  String
   userId    String
+  attempts  Int      @default(0)
   expiresAt DateTime
   createdAt DateTime @default(now())
-
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("email_verification_tokens")
 }
 
@@ -193,5 +203,6 @@ model ChatMessage {
   reviewId String
   review   Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
+  @@index([reviewId, createdAt])
   @@map("chat_messages")
 }

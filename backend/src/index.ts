@@ -10,6 +10,7 @@ import {
   globalLimiter,
   authLimiter,
   forgotPasswordLimiter,
+  verifyCodeLimiter,
 } from "./middleware/rateLimit.middleware";
 import { startCleanupJob } from "./jobs/cleanup.job";
 
@@ -54,11 +55,15 @@ app.use(globalLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 app.use("/api/auth/forgot-password", forgotPasswordLimiter);
+app.use("/api/auth/reset-password", verifyCodeLimiter);
+app.use("/api/auth/verify-reset-code", verifyCodeLimiter);
 app.use("/api/auth", authRouter);
 
 app.use("/api/reviews", reviewRouter);
 
 app.use("/api/team-profile", teamProfileRouter);
+
+
 
 app.use(errorMiddleware);
 

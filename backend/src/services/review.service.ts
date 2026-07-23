@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma";
 import { analyzeCode, REVIEWER_LEVEL_TO_PRISMA } from "./ai.service";
 import type { ReviewerLevel } from "./ai.service";
+import { reviewQueue } from "../queues/review.queue";
 
 // ──────────────────────
 // СОЗДАТЬ РЕВЬЮ
@@ -24,7 +25,7 @@ export const getReviewUsage = async (userId: string) => {
   };
 };
 
-export const createReview = async (data: {
+export const enqueueReview = async (data: {
   code: string;
   language: string;
   reviewerLevel: ReviewerLevel;
@@ -34,9 +35,9 @@ export const createReview = async (data: {
 
   if (used >= REVIEW_LIMIT) throw new Error("REVIEW_LIMIT_REACHED");
 
-  const teamProfile = await prisma.teamProfile.findUnique({
-    where: { userId: data.userId },
-  })
+  // const teamProfile = await prisma.teamProfile.findUnique({
+  //   where: { userId: data.userId },
+  // })
 
   // Шаг 1 — создаём запись со статусом PROCESSING
   const review = await prisma.review.create({
@@ -49,38 +50,9 @@ export const createReview = async (data: {
     },
   });
 
-  try {
-    // Шаг 2 — отправляем в AI (mock или реальный)
-    const result = await analyzeCode(
-      data.code,
-      data.language,
-      data.reviewerLevel,
-      teamProfile?.rules ?? [],
-    );
+  await reviewQueue.add("analyze", { reviewId: review.id });
 
-    // Шаг 3 — сохраняем результат
-    const updatedReview = await prisma.review.update({
-      where: { id: review.id },
-      data: {
-        status: "COMPLETED",
-        summary: result.summary,
-        score: result.score,
-        items: {
-          create: result.items,
-        },
-      },
-      include: { items: true },
-    });
-
-    return updatedReview;
-  } catch (error) {
-    // AI упал — помечаем FAILED
-    await prisma.review.update({
-      where: { id: review.id },
-      data: { status: "FAILED" },
-    });
-    throw error;
-  }
+  return review;
 };
 
 // ──────────────────────
@@ -140,10 +112,14 @@ export const deleteReview = async (id: string, userId: string) => {
     throw new Error("REVIEW_NOT_FOUND");
   }
 
-  await prisma.review.update({
-    where: { id },
-    data: { deletedAt: new Date() },
-  });
+  await prisma.$transaction([
+    prisma.chatMessage.deleteMany({ where: { reviewId: id } }),
+    prisma.reviewItem.deleteMany({ where: { reviewId: id } }),
+    prisma.review.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    }),
+  ]);
 };
 
 // ──────────────────────

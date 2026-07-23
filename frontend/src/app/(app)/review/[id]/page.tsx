@@ -78,10 +78,6 @@ export default function ReviewPage() {
     fetchReview(!cached);
   }, [reviewId]);
 
-  useEffect(() => {
-    fetchReview();
-  }, [params.id]);
-
   const fetchReview = async (showSkeleton: boolean) => {
     if (showSkeleton) setLoading(true);
     try {
