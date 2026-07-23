@@ -9,8 +9,8 @@ export const getChatHistory = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const cursor = req.query.cursor as string | undefined;
-    const result = await chatService.getChatHistory(id, req.userId!, cursor);
+    const before = req.query.before as string | undefined;
+    const result = await chatService.getChatHistory(id, req.userId!, before);
     res.status(200).json(result);
   } catch (error: any) {
     if (error.message === "REVIEW_NOT_FOUND") {

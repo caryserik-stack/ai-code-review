@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Plus, Trash2, PanelLeftOpen } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useReviewsStore } from "@/store/reviewsStore";
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import { SidebarSkeleton } from "@/components/skeletons/SidebarSkeleton";
 import { AccountMenu } from "@/components/layout/AccountMenu";
 import { SettingsModal } from "@/components/settings/SettingsModal";
@@ -93,13 +93,17 @@ export function Sidebar({
     router.push("/login");
   };
 
-  const filteredReviews = reviews
-    .filter((r) => r.language.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      const diff =
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      return sortOrder === "newest" ? diff : -diff;
-    });
+  const filteredReviews = useMemo(
+    () =>
+      reviews
+        .filter((r) => r.language.toLowerCase().includes(search.toLowerCase()))
+        .sort((a, b) => {
+          const diff =
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return sortOrder === "newest" ? diff : -diff;
+        }),
+    [reviews, search, sortOrder],
+  );
 
   const textCls = `whitespace-nowrap ${
     collapsed ? "opacity-0 pointer-events-none" : "opacity-100"

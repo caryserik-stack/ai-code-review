@@ -17,16 +17,20 @@ export const getChatHistory = async (
 
   const messages = await prisma.chatMessage.findMany({
     where: { reviewId },
-    orderBy: { createdAt: "asc" },
+    orderBy: { createdAt: "desc" },
     take: CHAT_MESSAGES_PER_PAGE + 1,
     ...(cursor && { cursor: { id: cursor }, skip: 1 }),
   });
 
   const hasMore = messages.length > CHAT_MESSAGES_PER_PAGE; 
-  const items = hasMore ? messages.slice(0, CHAT_MESSAGES_PER_PAGE) : messages;
-  const nextCursor = hasMore ? items[items.length - 1].id : null;
+  const page = hasMore ? messages.slice(0, CHAT_MESSAGES_PER_PAGE) : messages;
 
-  return { messages: items, nextCursor };
+  const ordered = [...page].reverse();
+
+
+  const nextCursor = hasMore ? page[page.length - 1].id : null;
+
+  return { messages: ordered, hasMore, nextCursor };
 };
 
 // Mock-генератор ответа — имитирует ответ AI, видящего весь код и issues

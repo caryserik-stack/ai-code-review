@@ -1,7 +1,7 @@
 // frontend/src/components/review/ReviewChatPanel.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { MessageSquare, X, Send, Loader2 } from "lucide-react";
@@ -28,14 +28,71 @@ export function ReviewChatPanel({ reviewId, open, onClose }: Props) {
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const [hasMore, setHasMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const topSentinelRef = useRef<HTMLDivElement>(null);
+
+  // Отличаем "подгрузка старых сообщений" (не скроллить вниз) от
+  // "новое сообщение добавлено" (скроллить вниз плавно).
+  const isLoadingOlderRef = useRef(false);
+  // Отличаем "первое открытие панели" (скролл вниз мгновенно, без анимации)
+  // от последующих обновлений (скролл плавный).
+  const isFirstLoadRef = useRef(true);
+
   useEffect(() => {
     if (!open) return;
+    isFirstLoadRef.current = true;
     reviewApi
       .getChatHistory(reviewId)
-      .then((data) => setMessages(data.messages))
+      .then((data) => {
+        setMessages(data.messages);
+        setHasMore(data.hasMore);
+        setNextCursor(data.nextCursor);
+      })
       .catch(() => toast.error("Failed to load chat history"))
       .finally(() => setLoaded(true));
   }, [open, reviewId]);
+
+  const loadOlder = useCallback(async () => {
+    if (!hasMore || !nextCursor || loadingOlder) return;
+    setLoadingOlder(true);
+    isLoadingOlderRef.current = true;
+
+    const container = scrollRef.current;
+    const prevHeight = container?.scrollHeight ?? 0;
+
+    try {
+      const data = await reviewApi.getChatHistory(reviewId, nextCursor);
+      setMessages((prev) => [...data.messages, ...prev]);
+      setHasMore(data.hasMore);
+      setNextCursor(data.nextCursor);
+
+      requestAnimationFrame(() => {
+        if (container) {
+          container.scrollTop = container.scrollHeight - prevHeight;
+        }
+      });
+    } catch {
+      toast.error("Failed to load older messages");
+      isLoadingOlderRef.current = false;
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [reviewId, hasMore, nextCursor, loadingOlder]);
+
+  useEffect(() => {
+    const sentinel = topSentinelRef.current;
+    if (!sentinel || !open) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) loadOlder();
+      },
+      { root: scrollRef.current, threshold: 1 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [open, loadOlder]);
 
   useEffect(() => {
     if (!open) return;
@@ -46,12 +103,22 @@ export function ReviewChatPanel({ reviewId, open, onClose }: Props) {
     return () => document.removeEventListener("keydown", handleKey);
   }, [open, onClose]);
 
-  // Автоскролл к последнему сообщению при добавлении нового
+  // Единственный источник правды для автоскролла:
+  // - при подгрузке старых сообщений (loadOlder) — не трогаем скролл вообще,
+  //   позиция уже восстановлена вручную в loadOlder через scrollTop.
+  // - при первом открытии панели — скроллим к низу мгновенно (без анимации),
+  //   чтобы не было заметного "проезда" по всей истории.
+  // - при новом сообщении в уже открытом чате — плавный скролл вниз.
   useEffect(() => {
+    if (isLoadingOlderRef.current) {
+      isLoadingOlderRef.current = false;
+    }
+    const behavior: ScrollBehavior = isFirstLoadRef.current ? "auto" : "smooth";
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
-      behavior: "smooth",
+      behavior,
     });
+    isFirstLoadRef.current = false;
   }, [messages]);
 
   const handleSend = async () => {
@@ -130,10 +197,17 @@ export function ReviewChatPanel({ reviewId, open, onClose }: Props) {
               ref={scrollRef}
               className="flex-1 overflow-y-auto p-4 space-y-3"
             >
+              {hasMore && <div ref={topSentinelRef} className="h-1" />}
+              {loadingOlder && (
+                <div className="flex justify-center py-2">
+                  <Loader2 size={14} className="animate-spin text-gray-400" />
+                </div>
+              )}
+
               {!loaded ? (
-                <p className="text-sm text-gray-400 dark:text-gray-500">
-                  Loading...
-                </p>
+                <div className="flex justify-center py-2">
+                  <Loader2 size={14} className="animate-spin text-gray-400" />
+                </div>
               ) : messages.length === 0 ? (
                 <p className="text-sm text-gray-400 dark:text-gray-500">
                   Ask why an issue matters, how to fix it, or anything else

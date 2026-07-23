@@ -152,7 +152,10 @@ export const reviewApi = {
 
   // frontend/src/lib/apiClient.ts — добавить в reviewApi
 
-  getChatHistory: (id: string) => request(`/reviews/${id}/chat`),
+  getChatHistory: (id: string, before?: string) =>
+    request(
+      before ? `/reviews/${id}/chat?before=${before}` : `/reviews/${id}/chat`,
+    ),
 
   sendChatMessage: (id: string, content: string) =>
     request(`/reviews/${id}/chat`, {
