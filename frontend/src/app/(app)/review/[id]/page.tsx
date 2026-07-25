@@ -11,6 +11,7 @@ import { QualityGateBanner } from "@/components/review/QualityGateBanner";
 import { Download, FileText, ChevronDown, MessageSquare } from "lucide-react";
 import { useReviewsStore } from "@/store/reviewsStore";
 import { ReviewChatPanel } from "@/components/review/ReviewChatPanel";
+import { ScoreGauge } from "@/components/review/ScoreGauge";
 
 interface ReviewItem {
   id: string;
@@ -229,18 +230,8 @@ export default function ReviewPage() {
               </span>
             </div>
 
-            {review.score !== null && (
-              <div className="text-right">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Score
-                </p>
-                <p
-                  className={`text-3xl font-bold ${getScoreColor(review.score)}`}
-                >
-                  {review.score}/100
-                </p>
-              </div>
-            )}
+            {review.score !== null && <ScoreGauge score={review.score} />}
+
           </div>
           {review.summary && (
             <p className="mt-4 text-gray-600 dark:text-gray-300 text-sm border-t border-gray-100 dark:border-border-dark pt-4">

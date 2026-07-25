@@ -1,8 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Check, Copy } from "lucide-react";
+import {
+  ChevronDown,
+  Check,
+  Copy,
+  AlertCircle,
+  AlertTriangle,
+  ShieldAlert,
+  Lightbulb,
+} from "lucide-react";
 import { reviewApi } from "@/lib/apiClient";
 import { toast } from "sonner";
 import { OWASP_LABELS, SEVERITY_STYLES } from "@/lib/owasp";
@@ -25,31 +34,36 @@ type ReviewItem = {
 type IssueStyle = {
   border: string;
   badge: string;
-  icon: string;
+  Icon: typeof AlertCircle;
+  iconColor: string;
 };
 
 const ITEM_STYLES: Record<IssueType, IssueStyle> = {
   ERROR: {
     border: "border-l-red-500",
     badge: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300",
-    icon: "🔴",
+    Icon: AlertCircle,
+    iconColor: "text-red-500 dark:text-red-400",
   },
   WARNING: {
     border: "border-l-yellow-500",
     badge:
       "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300",
-    icon: "🟡",
+    Icon: AlertTriangle,
+    iconColor: "text-yellow-500 dark:text-yellow-400",
   },
   SECURITY: {
     border: "border-l-purple-500",
     badge:
       "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300",
-    icon: "🔒",
+    Icon: ShieldAlert,
+    iconColor: "text-purple-500 dark:text-purple-400",
   },
   SUGGESTION: {
     border: "border-l-blue-500",
     badge: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
-    icon: "💡",
+    Icon: Lightbulb,
+    iconColor: "text-blue-500 dark:text-blue-400",
   },
 };
 
@@ -58,11 +72,12 @@ const DEFAULT_OPEN_TYPES: ReadonlySet<IssueType> = new Set([
   "SECURITY",
 ]);
 
-// Показывает исправление тремя способами в зависимости от того,
-// что реально есть в данных:
-// 1. Есть originalCode И suggestedCode → полноценный diff (было/стало)
-// 2. Есть только suggestedCode → просто "что добавить", без diff
-// 3. Оба пусты → компонент не рендерится вообще (вызывающий код это проверяет)
+const VIRTUALIZE_THRESHOLD = 15;
+const VIRTUAL_LIST_HEIGHT = 640;
+const ESTIMATED_ITEM_HEIGHT = 88;
+
+// --------------------------------------------
+// DIFFBLOCK
 type DiffBlockProps = {
   originalCode: string | null;
   suggestedCode: string;
@@ -72,7 +87,7 @@ function DiffBlock({ originalCode, suggestedCode }: DiffBlockProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // не даём клику всплыть до кнопки-заголовка карточки
+    e.stopPropagation();
     await navigator.clipboard.writeText(suggestedCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -112,6 +127,9 @@ function DiffBlock({ originalCode, suggestedCode }: DiffBlockProps) {
   );
 }
 
+//---------------------------------------------------------------
+//ISSUEACCORDIONITEM
+
 type IssueAccordionItemProps = {
   item: ReviewItem;
   onLineClick?: (line: number) => void;
@@ -123,8 +141,6 @@ function IssueAccordionItem({
   onLineClick,
   onResolvedChange,
 }: IssueAccordionItemProps) {
-  // Если issue уже resolved (например, при загрузке страницы) — сразу свёрнут,
-  // независимо от типа. Иначе — обычное правило по типу.
   const [isOpen, setIsOpen] = useState(
     !item.resolved && DEFAULT_OPEN_TYPES.has(item.type),
   );
@@ -132,20 +148,16 @@ function IssueAccordionItem({
   const style = ITEM_STYLES[item.type];
 
   const handleResolveToggle = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // не даём клику по чекбоксу сворачивать/разворачивать карточку
+    e.stopPropagation();
 
     const nextResolved = !item.resolved;
-
-    // Оптимистичное обновление — сразу обновляем UI (родитель хранит items),
-    // не дожидаясь ответа сервера. Если запрос упадёт — откатываем.
     onResolvedChange(item.id, nextResolved);
-    if (nextResolved) setIsOpen(false); // автосворачивание при отметке resolved
+    if (nextResolved) setIsOpen(false);
 
     setIsSaving(true);
     try {
       await reviewApi.toggleItemResolved(item.id, nextResolved);
-    } catch (err) {
-      // откат при ошибке сети/сервера
+    } catch {
       onResolvedChange(item.id, !nextResolved);
       toast.error("Failed to update issue status");
     } finally {
@@ -172,7 +184,6 @@ function IssueAccordionItem({
         aria-expanded={isOpen}
         className="w-full flex items-start gap-3 p-4 text-left hover:bg-gray-50 dark:hover:bg-surface-dark/50 transition-colors cursor-pointer"
       >
-        {/* Чекбокс resolved — отдельная кликабельная зона слева от иконки типа */}
         <button
           type="button"
           onClick={handleResolveToggle}
@@ -189,7 +200,7 @@ function IssueAccordionItem({
           )}
         </button>
 
-        <span className="shrink-0">{style.icon}</span>
+        <style.Icon className={`shrink-0 w-4 h-4 mt-0.5 ${style.iconColor}`} strokeWidth={2.25} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span
@@ -290,6 +301,78 @@ function IssueAccordionItem({
   );
 }
 
+//-----------------------------------------------------------------------------
+//VIRTUALIZEDISSUE
+
+// Виртуализированный список — включается только при большом количестве
+// issues. Каждый item измеряется динамически (measureElement), т.к.
+// раскрытые карточки с diff-блоком заметно выше свёрнутых — статичная
+// estimateSize тут была бы неточной без re-measure.
+type VirtualizedIssueListProps = {
+  items: ReviewItem[];
+  onLineClick?: (line: number) => void;
+  onResolvedChange: (id: string, resolved: boolean) => void;
+};
+
+function VirtualizedIssueList({
+  items,
+  onLineClick,
+  onResolvedChange,
+}: VirtualizedIssueListProps) {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ESTIMATED_ITEM_HEIGHT,
+    overscan: 5,
+    gap: 12, // соответствует space-y-3 (0.75rem = 12px) в обычном режиме
+  });
+
+  return (
+    <div
+      ref={parentRef}
+      className="overflow-y-auto pr-1 -mr-1"
+      style={{ height: VIRTUAL_LIST_HEIGHT }}
+    >
+      <div
+        style={{
+          height: virtualizer.getTotalSize(),
+          position: "relative",
+          width: "100%",
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const item = items[virtualRow.index];
+          return (
+            <div
+              key={item.id}
+              data-index={virtualRow.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+            >
+              <IssueAccordionItem
+                item={item}
+                onLineClick={onLineClick}
+                onResolvedChange={onResolvedChange}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+//---------------------------------------------------------------------------------------------
+//ISSUEACCORDION
+
 type IssueAccordionProps = {
   items: ReviewItem[];
   onLineClick?: (line: number) => void;
@@ -305,13 +388,13 @@ export function IssueAccordion({
 
   const resolvedCount = items.filter((i) => i.resolved).length;
 
-  // Оптимистично обновляем локальный список items у родителя —
-  // родитель (страница) хранит review.items в своём стейте
   const handleResolvedChange = (id: string, resolved: boolean) => {
     onItemsChange(
       items.map((item) => (item.id === id ? { ...item, resolved } : item)),
     );
   };
+
+  const shouldVirtualize = items.length > VIRTUALIZE_THRESHOLD;
 
   return (
     <div>
@@ -325,16 +408,27 @@ export function IssueAccordion({
           </span>
         )}
       </div>
-      <div className="space-y-3">
-        {items.map((item) => (
-          <IssueAccordionItem
-            key={item.id}
-            item={item}
-            onLineClick={onLineClick}
-            onResolvedChange={handleResolvedChange}
-          />
-        ))}
-      </div>
+
+      {shouldVirtualize ? (
+        <VirtualizedIssueList
+          items={items}
+          onLineClick={onLineClick}
+          onResolvedChange={handleResolvedChange}
+        />
+      ) : (
+        <div className="space-y-3">
+          {items.map((item) => (
+            <IssueAccordionItem
+              key={item.id}
+              item={item}
+              onLineClick={onLineClick}
+              onResolvedChange={handleResolvedChange}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
+//-----------------------------------------------------------------------------

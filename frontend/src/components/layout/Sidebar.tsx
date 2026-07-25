@@ -85,7 +85,6 @@ export function Sidebar({
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [menuOpen, setMenuOpen] = useState(false);
-  const accountBtnRef = useRef<HTMLButtonElement>(null);
   const settings = useSettingsRoute();
 
   const handleLogout = async () => {
@@ -267,38 +266,35 @@ export function Sidebar({
       {/* Footer */}
       {user && (
         <div className="shrink-0 p-3 border-t border-gray-200 dark:border-border-dark">
-          <button
-            ref={accountBtnRef}
-            onClick={() => setMenuOpen((v) => !v)}
-            className="w-full flex items-center py-2 rounded-lg transition-colors text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-surface-dark"
-          >
-            <span className={iconSlot}>
-              <div className="w-8 h-8 rounded-full bg-orange-400 flex items-center justify-center text-white text-xs font-bold">
-                {user?.name?.[0]?.toUpperCase() ??
-                  user?.email?.[0]?.toUpperCase() ??
-                  "?"}
-              </div>
-            </span>
-            <div className={`flex-1 min-w-0 ${textCls}`}>
-              <p className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">
-                {user?.name ?? "No name"}
-              </p>
-              <p className="text-xs truncate text-gray-400 dark:text-gray-500">
-                {user?.email}
-              </p>
-            </div>
-          </button>
 
           <AccountMenu
             open={menuOpen}
-            onClose={() => setMenuOpen(false)}
-            anchorRef={accountBtnRef}
+            onOpenChange={setMenuOpen}
             user={user}
             onOpenSettings={() => {
               setMenuOpen(false);
               settings.open("account");
             }}
             onLogout={handleLogout}
+            trigger={
+              <button className="w-full flex items-center py-2 rounded-lg transition-colors text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-surface-dark">
+                <span className={iconSlot}>
+                  <div className="w-8 h-8 rounded-full bg-orange-400 flex items-center justify-center text-white text-xs font-bold">
+                    {user?.name?.[0]?.toUpperCase() ??
+                      user?.email?.[0]?.toUpperCase() ??
+                      "?"}
+                  </div>
+                </span>
+                <div className={`flex-1 min-w-0 ${textCls}`}>
+                  <p className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">
+                    {user?.name ?? "No name"}
+                  </p>
+                  <p className="text-xs truncate text-gray-400 dark:text-gray-500">
+                    {user?.email}
+                  </p>
+                </div>
+              </button>
+            }
           />
         </div>
       )}

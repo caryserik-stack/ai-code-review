@@ -17,12 +17,6 @@ type CodeToolbarProps = {
   onChooseFile: () => void;
 };
 
-/**
- * Ряд контролов над редактором кода: язык, уровень ревьюера, выбор файла.
- * На десктопе уровень ревьюера — сегментированный контрол,
- * на мобильных — dropdown (как язык), потому что три подписанных кнопки
- * не помещаются на узком экране.
- */
 export function CodeToolbar({
   language,
   onLanguageChange,
@@ -32,10 +26,6 @@ export function CodeToolbar({
   reviewerLevelOptions,
   onChooseFile,
 }: CodeToolbarProps) {
-  // Только один dropdown может быть открыт одновременно
-  const [openPicker, setOpenPicker] = useState<"language" | "level" | null>(
-    null,
-  );
   const [rulesPanelOpen, setRulesPanelOpen] = useState(false);
 
   return (
@@ -47,19 +37,14 @@ export function CodeToolbar({
         Your Code
       </label>
 
-      {/* justify-end + все элементы в одном ряду у правого края —
-          это важно и для dropdown: InlineSelect позиционируется через right-0,
-          что корректно раскрывается влево только когда кнопка сама у правого края */}
       <div className="flex items-center gap-1.5 shrink-0">
         <InlineSelect
           value={language}
           options={languageOptions}
           onChange={onLanguageChange}
-          isOpen={openPicker === "language"}
-          onOpenChange={(open) => setOpenPicker(open ? "language" : null)}
         />
 
-        {/* Десктоп: сегментированный контрол */}
+        {/* Десктоп: сегментированный контрол — без изменений, это не dropdown */}
         <div className="hidden sm:flex items-center gap-1 bg-gray-100 dark:bg-surface-dark rounded-lg p-0.5">
           {reviewerLevelOptions.map((level) => (
             <button
@@ -83,8 +68,6 @@ export function CodeToolbar({
           value={reviewerLevel}
           options={reviewerLevelOptions}
           onChange={onReviewerLevelChange}
-          isOpen={openPicker === "level"}
-          onOpenChange={(open) => setOpenPicker(open ? "level" : null)}
         />
 
         <button
@@ -107,7 +90,10 @@ export function CodeToolbar({
         </button>
       </div>
 
-      <TeamRulesPanel open={rulesPanelOpen} onClose={() => setRulesPanelOpen(false)} />
+      <TeamRulesPanel
+        open={rulesPanelOpen}
+        onClose={() => setRulesPanelOpen(false)}
+      />
     </div>
   );
 }
