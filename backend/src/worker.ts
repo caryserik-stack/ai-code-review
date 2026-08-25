@@ -1,3 +1,5 @@
+import "dotenv/config";
+console.log("REDIS_URL", process.env.REDIS_URL);
 import { Worker, Job } from "bullmq";
 import { redisConnection } from "./lib/redis";
 import { prisma } from "./lib/prisma";

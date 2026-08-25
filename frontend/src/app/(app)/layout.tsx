@@ -84,7 +84,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const showRail = mounted && railCollapsed;
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-surface-dark">
+    <div className="flex h-screen bg-gray-50 dark:bg-surface-dark overflow-hidden">
       {/*
         ВАЖНО: раньше здесь был AnimatePresence, переключающий между
         двумя РАЗНЫМИ компонентами (Sidebar и SidebarRail) — из-за этого
@@ -129,7 +129,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      <main className="flex-1 min-w-0 overflow-y-auto">
+      <main className="flex-1 min-w-0 overflow-y-auto [overflow-anchor:none]">
         <div className="md:hidden sticky top-0 z-10 bg-white dark:bg-card-dark border-b border-gray-200 dark:border-border-dark px-4 h-[57px] flex items-center gap-3">
           <button
             onClick={() => setMobileOpen(true)}

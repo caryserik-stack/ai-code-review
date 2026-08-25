@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, cache } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { reviewApi } from "@/lib/apiClient";
@@ -12,6 +12,11 @@ import { Download, FileText, ChevronDown, MessageSquare } from "lucide-react";
 import { useReviewsStore } from "@/store/reviewsStore";
 import { ReviewChatPanel } from "@/components/review/ReviewChatPanel";
 import { ScoreGauge } from "@/components/review/ScoreGauge";
+import { toast } from "sonner";
+import { useIssueFilter } from "@/hooks/useIssueFilter";
+import { IssueFilterBar } from "@/components/review/IssueFilterBar";
+import { AnimatedProgressBar } from "@/components/review/AnimatedProgressBar";
+import { ReviewStatsGrid } from "@/components/review/ReviewStatsGrid";
 
 interface ReviewItem {
   id: string;
@@ -50,8 +55,37 @@ export default function ReviewPage() {
 
   const [exportOpen, setExportOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   const [chatOpen, setChatOpen] = useState(false);
+
+  const { filter, setFilter, search, setSearch, filtered } = useIssueFilter(
+    review?.items ?? [],
+  );
+
+  const issuesRef = useRef<HTMLDivElement>(null);
+
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!exportOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+        setExportOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExportOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [exportOpen]);
 
   const handleDownloadMarkdown = async () => {
     setExportOpen(false);
@@ -167,7 +201,7 @@ export default function ReviewPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-surface-dark">
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-        <div className="flex justify-end gap-2 relative">
+        <div className="flex justify-end gap-2 relative" ref={exportRef}>
           <button
             onClick={() => setChatOpen(true)}
             className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-card-dark border border-gray-200 dark:border-border-dark rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-surface-dark transition-colors"
@@ -218,7 +252,6 @@ export default function ReviewPage() {
                 {review.language}
               </p>
             </div>
-
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Reviewed as
@@ -229,33 +262,106 @@ export default function ReviewPage() {
                 {review.reviewerLevel.toLowerCase()}
               </span>
             </div>
-
             {review.score !== null && <ScoreGauge score={review.score} />}
-
           </div>
+
           {review.summary && (
             <p className="mt-4 text-gray-600 dark:text-gray-300 text-sm border-t border-gray-100 dark:border-border-dark pt-4">
               {review.summary}
             </p>
           )}
+
+          {/* 👇 ДОБАВИТЬ: прогресс-бар прямо тут, внутри score-карточки */}
+          {review.score !== null && (
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-border-dark">
+              <AnimatedProgressBar
+                value={review.score}
+                label="Code Quality Score"
+                colorFrom={
+                  review.score >= 80
+                    ? "from-green-500"
+                    : review.score >= 60
+                      ? "from-yellow-500"
+                      : "from-red-500"
+                }
+                colorTo={
+                  review.score >= 80
+                    ? "to-emerald-400"
+                    : review.score >= 60
+                      ? "to-orange-400"
+                      : "to-rose-400"
+                }
+              />
+            </div>
+          )}
         </div>
+
+        {/* 👇 ДОБАВИТЬ: статистика — отдельным блоком между score-карточкой и Quality Gate баннером */}
+        <ReviewStatsGrid
+          linesAnalyzed={review.code.split("\n").length}
+          durationSeconds={12.4}
+          qualityScore={review.score ?? 0}
+          criticalCount={
+            review.items.filter(
+              (i) =>
+                i.type === "SECURITY" &&
+                (i.severity === "CRITICAL" || i.severity === "HIGH"),
+            ).length
+          }
+          maintainabilityIndex={Math.max(
+            0,
+            100 -
+              review.items.filter((i) => i.type !== "SUGGESTION").length * 5,
+          )}
+        />
 
         {/* Quality Gate баннер */}
         <QualityGateBanner items={review.items} />
 
-        {/* Замечания */}
-        <IssueAccordion
+        <IssueFilterBar
           items={review.items}
-          onLineClick={handleLineClick}
-          onItemsChange={(updatedItems) => {
-            setReview((prev) => {
-              if (!prev) return prev;
-              const next = { ...prev, items: updatedItems };
-              cacheReview(next);
-              return next;
-            });
+          activeFilter={filter}
+          onFilterChange={(f) => {
+            setFilter(f);
+
+            if (scrollTimeoutRef.current)
+              clearTimeout(scrollTimeoutRef.current);
+            scrollTimeoutRef.current = setTimeout(() => {
+              const el = issuesRef.current;
+              if (!el) return;
+              const rect = el.getBoundingClientRect();
+              const isFullyVisible =
+                rect.top >= 0 && rect.bottom <= window.innerHeight;
+              if (!isFullyVisible) {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+              }
+            }, 300);
           }}
+          search={search}
+          onSearchChange={setSearch}
         />
+
+        {/* Замечания */}
+        <div ref={issuesRef}>
+          <IssueAccordion
+            items={filtered}
+            onLineClick={handleLineClick}
+            onItemsChange={(updatedItems) => {
+              setReview((prev) => {
+                if (!prev) return prev;
+                const updatedMap = new Map(updatedItems.map((i) => [i.id, i]));
+                const next = {
+                  ...prev,
+                  items: prev.items.map(
+                    (item) => updatedMap.get(item.id) ?? item,
+                  ),
+                };
+                cacheReview(next);
+                return next;
+              });
+            }}
+          />
+        </div>
 
         <ReviewChatPanel
           reviewId={review.id}

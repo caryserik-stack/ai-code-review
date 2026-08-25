@@ -5,15 +5,19 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-surface-light: #F9FAFB;
+  --color-surface-light: #f9fafb;
   --color-surface-dark: #202020;
   --color-card-dark: #262626;
   --color-border-dark: #303030;
 }
 
 @keyframes skeleton-shimmer {
-  0% { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
 }
 
 html {
@@ -25,12 +29,38 @@ html::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Edge */
 }
 
+html {
+  overflow-y: scroll;
+  scrollbar-width: none;
+  overflow-anchor: none;
+}
+
+main {
+  overflow-anchor: none;
+}
+
 @media print {
   body {
     background: white !important;
   }
   .print\:hidden {
     display: none !important;
+  }
+}
+
+/* frontend/src/app/globals.css — добавить в конец файла */
+@keyframes progress-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes progress-grow {
+  from {
+    width: 0%;
   }
 }
 

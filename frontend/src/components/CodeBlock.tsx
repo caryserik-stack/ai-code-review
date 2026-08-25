@@ -74,9 +74,10 @@ export function CodeBlock({ code, language, highlightLine }: CodeBlockProps) {
     lineEl.scrollIntoView({ behavior: "smooth", block: "center" });
 
     lineEl.style.transition = "background-color 0.3s ease";
-    lineEl.style.backgroundColor = resolvedTheme === "dark"
-      ? "rgba(250, 204, 21, 0.15)"
-      : "rgba(250, 204, 21, 0.25)";
+    lineEl.style.backgroundColor =
+      resolvedTheme === "dark"
+        ? "rgba(250, 204, 21, 0.15)"
+        : "rgba(250, 204, 21, 0.25)";
 
     const timeout = setTimeout(() => {
       lineEl.style.backgroundColor = "transparent";

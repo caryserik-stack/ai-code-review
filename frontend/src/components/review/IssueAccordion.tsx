@@ -200,7 +200,10 @@ function IssueAccordionItem({
           )}
         </button>
 
-        <style.Icon className={`shrink-0 w-4 h-4 mt-0.5 ${style.iconColor}`} strokeWidth={2.25} />
+        <style.Icon
+          className={`shrink-0 w-4 h-4 mt-0.5 ${style.iconColor}`}
+          strokeWidth={2.25}
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span
@@ -384,8 +387,6 @@ export function IssueAccordion({
   onLineClick,
   onItemsChange,
 }: IssueAccordionProps) {
-  if (items.length === 0) return null;
-
   const resolvedCount = items.filter((i) => i.resolved).length;
 
   const handleResolvedChange = (id: string, resolved: boolean) => {
@@ -409,23 +410,41 @@ export function IssueAccordion({
         )}
       </div>
 
-      {shouldVirtualize ? (
+      {items.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-10 text-sm text-gray-400 dark:text-gray-500 bg-white dark:bg-card-dark rounded-xl border border-gray-200 dark:border-border-dark"
+        >
+          No issues match this filter
+        </motion.div>
+      ) : shouldVirtualize ? (
         <VirtualizedIssueList
           items={items}
           onLineClick={onLineClick}
           onResolvedChange={handleResolvedChange}
         />
       ) : (
-        <div className="space-y-3">
-          {items.map((item) => (
-            <IssueAccordionItem
-              key={item.id}
-              item={item}
-              onLineClick={onLineClick}
-              onResolvedChange={handleResolvedChange}
-            />
-          ))}
-        </div>
+        <motion.div layout className="space-y-3">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {items.map((item) => (
+              <motion.div
+                key={item.id}
+                layout="position"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.97 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <IssueAccordionItem
+                  item={item}
+                  onLineClick={onLineClick}
+                  onResolvedChange={handleResolvedChange}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
       )}
     </div>
   );
