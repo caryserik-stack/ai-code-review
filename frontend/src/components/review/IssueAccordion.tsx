@@ -425,7 +425,7 @@ export function IssueAccordion({
           onResolvedChange={handleResolvedChange}
         />
       ) : (
-        <motion.div layout className="space-y-3">
+        <motion.div layout className="flex flex-col gap-3">
           <AnimatePresence mode="popLayout" initial={false}>
             {items.map((item) => (
               <motion.div

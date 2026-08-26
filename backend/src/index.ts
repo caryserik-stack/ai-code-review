@@ -13,6 +13,7 @@ import {
   verifyCodeLimiter,
 } from "./middleware/rateLimit.middleware";
 import { startCleanupJob } from "./jobs/cleanup.job";
+import { startStaleReviewsJob } from "./jobs/staleReviews.job";
 
 // Загружаем переменные окружения из .env
 // Это должно быть ПЕРВЫМ — до любых других импортов
@@ -63,8 +64,6 @@ app.use("/api/reviews", reviewRouter);
 
 app.use("/api/team-profile", teamProfileRouter);
 
-
-
 app.use(errorMiddleware);
 
 // Health check — первый эндпоинт
@@ -84,6 +83,7 @@ app.get("/health", (req, res) => {
 
 app.listen(PORT, () => {
   startCleanupJob();
+  startStaleReviewsJob();
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);

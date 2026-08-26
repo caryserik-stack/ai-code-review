@@ -88,7 +88,7 @@ export default function NewReviewForm() {
         language: data.review.language,
         createdAt: data.review.createdAt,
       });
-      cacheReview(data.review);
+      cacheReview({ ...data.review, items: data.review.items ?? [] });
 
       if (data.remaining !== -1) {
         setRateLimit(data.remaining, data.limit);
