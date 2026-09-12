@@ -278,7 +278,7 @@ export default function ReviewPage() {
           )}
         </div>
 
-        {stats && (
+        {/* {stats && (
           <ReviewStatsGrid
             linesAnalyzed={stats.linesAnalyzed}
             durationSeconds={stats.durationSeconds ?? 0}
@@ -286,7 +286,7 @@ export default function ReviewPage() {
             criticalCount={stats.criticalCount}
             maintainabilityIndex={stats.maintainabilityIndex}
           />
-        )}
+        )} */}
 
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
           <QualityGateBanner items={items} />

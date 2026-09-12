@@ -1,6 +1,9 @@
+import { GoogleGenAI, Type } from "@google/genai";
 import { OwaspCategory } from "@prisma/client";
 
-// Типы для результата анализа
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// Типы — без изменений, worker.ts на них завязан
 export interface ReviewResult {
   summary: string;
   score: number;
@@ -33,112 +36,97 @@ export const REVIEWER_LEVEL_FROM_PRISMA: Record<
   SENIOR: "senior",
 };
 
-// Наборы моковых issues под каждый уровень —
-// имитируем, что junior-ревью более подробное и обучающее,
-// а senior-ревью фокусируется на архитектуре и безопасности
-const MOCK_ITEMS_BY_LEVEL: Record<ReviewerLevel, ReviewResult["items"]> = {
-  junior: [
-    {
-      type: "SUGGESTION",
-      title: "Add explicit type annotation",
-      description:
-        "In TypeScript, explicitly typing variables (instead of relying on inference) makes your code easier to read for other developers, and catches mistakes earlier.",
-      line: 1,
-      originalCode: "const x: number = 1",
-      suggestedCode: "const x: number = 1",
+const OWASP_VALUES = [
+  "A01_BROKEN_ACCESS_CONTROL",
+  "A02_CRYPTOGRAPHIC_FAILURES",
+  "A03_INJECTION",
+  "A04_INSECURE_DESIGN",
+  "A05_SECURITY_MISCONFIGURATION",
+  "A06_VULNERABLE_COMPONENTS",
+  "A07_AUTH_FAILURES",
+  "A08_SOFTWARE_DATA_INTEGRITY_FAILURES",
+  "A09_LOGGING_MONITORING_FAILURES",
+  "A10_SSRF",
+];
+const SEVERITY_VALUES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+const TYPE_VALUES = ["ERROR", "WARNING", "SUGGESTION", "SECURITY"];
+
+// Gemini-схема — Type.* вместо строк "string"/"object"
+const REVIEW_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    summary: { type: Type.STRING },
+    score: { type: Type.INTEGER },
+    items: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          type: { type: Type.STRING, enum: TYPE_VALUES },
+          title: { type: Type.STRING },
+          description: { type: Type.STRING },
+          line: { type: Type.INTEGER },
+          originalCode: { type: Type.STRING },
+          suggestedCode: { type: Type.STRING },
+          owaspCategory: { type: Type.STRING, enum: OWASP_VALUES },
+          severity: { type: Type.STRING, enum: SEVERITY_VALUES },
+        },
+        required: ["type", "title", "description"],
+      },
     },
-    {
-      type: "WARNING",
-      title: "Unused variable",
-      description:
-        'Variable "x" is declared but never used anywhere else in the code. Unused variables often signal leftover debug code or a forgotten step — consider removing it or double-checking your logic.',
-      line: 1,
-    },
-    {
-      type: "SUGGESTION",
-      title: "Consider adding a comment",
-      description:
-        "A short comment explaining what this function does would help future readers (including future you!) understand the intent faster.",
-      line: 1,
-    },
-  ],
-  middle: [
-    {
-      type: "SUGGESTION",
-      title: "Add explicit type annotation",
-      description:
-        "Variable declarations should have explicit types in TypeScript",
-      line: 1,
-      originalCode: "const x = 1",
-      suggestedCode: "const x: number = 1",
-    },
-    {
-      type: "WARNING",
-      title: "Unused variable",
-      description: "Variable x is declared but never used",
-      line: 1,
-    },
-    {
-      type: "SECURITY",
-      title: "No input validation",
-      description: "Consider validating inputs before processing",
-      line: 1,
-      suggestedCode: "if (!input) throw new Error('Input is required');",
-      owaspCategory: "A04_INSECURE_DESIGN",
-      severity: "MEDIUM",
-    },
-  ],
-  senior: [
-    {
-      type: "SECURITY",
-      title: "Missing input validation at boundary",
-      description:
-        "No validation at the function entry point. In production, unvalidated input at API boundaries is a common source of injection and type-confusion bugs.",
-      line: 1,
-      suggestedCode: "const parsed = schema.parse(input);",
-      owaspCategory: "A03_INJECTION",
-      severity: "HIGH",
-    },
-    {
-      type: "ERROR",
-      title: "Unhandled edge case",
-      description:
-        "No handling for empty/null input. Under concurrent load or malformed upstream data, this will throw and potentially crash the request handler.",
-      line: 1,
-    },
-    {
-      type: "SUGGESTION",
-      title: "Consider extracting to a pure function",
-      description:
-        "Side-effect-free logic here would improve testability and make this safe to memoize if called on a hot path.",
-      line: 1,
-    },
-  ],
+  },
+  required: ["summary", "score", "items"],
 };
 
-const MOCK_SCORE_BY_LEVEL: Record<ReviewerLevel, number> = {
-  junior: 78, // мягче — фокус на обучении, не на идеальности
-  middle: 72,
-  senior: 61, // строже — выше планка ожиданий
+const REVIEWER_LEVEL_PROMPT: Record<ReviewerLevel, string> = {
+  junior:
+    "Review as if mentoring a junior developer: explain the *why* behind each issue in plain language, favor educational SUGGESTION items, and be encouraging.",
+  middle:
+    "Review at a standard professional level: flag real bugs, missing validation, and style issues without excessive hand-holding.",
+  senior:
+    "Review with a strict senior/staff-engineer bar: focus on architecture, security boundaries, edge cases, maintainability. Be terse.",
 };
 
-// Mock версия — имитирует ответ Claude
-// Когда получишь API ключ — заменим на реальный вызов
 export const analyzeCode = async (
   code: string,
   language: string,
   reviewerLevel: ReviewerLevel = "junior",
   customRules: string[] = [],
 ): Promise<ReviewResult> => {
-  // Имитируем задержку AI (1 секунда)
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  const rulesBlock = customRules.length
+    ? `\n\nAlso enforce these team-specific rules:\n${customRules.map((r) => `- ${r}`).join("\n")}`
+    : "";
 
-  return {
-    summary:
-      customRules.length > 0
-        ? `Mock ${reviewerLevel}-level analysis of ${language} code, checked against ${customRules.length} custom team rule(s). ${code.length} characters analyzed.`
-        : `Mock ${reviewerLevel}-level analysis of ${language} code. ${code.length} characters analyzed.`,
-    score: MOCK_SCORE_BY_LEVEL[reviewerLevel],
-    items: MOCK_ITEMS_BY_LEVEL[reviewerLevel],
-  };
+  const response = await ai.models.generateContent({
+    model: "gemini-3.6-flash", // проверь актуальное имя в aistudio.google.com — модели у Google обновляются часто
+    contents: `You are an expert ${language} code reviewer. ${REVIEWER_LEVEL_PROMPT[reviewerLevel]}${rulesBlock}
+
+Rules:
+- "line" is the 1-indexed line number in the code below.
+- Set "owaspCategory" and "severity" ONLY when type is "SECURITY" — omit for every other type.
+- Include "originalCode"/"suggestedCode" only when you have a concrete fix.
+
+Review this ${language} code:
+
+\`\`\`${language}
+${code}
+\`\`\``,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: REVIEW_SCHEMA,
+    },
+  });
+
+  if (!response.text) throw new Error("AI_NO_STRUCTURED_RESPONSE");
+
+  const result = JSON.parse(response.text) as ReviewResult;
+
+  // Защитный пост-процессинг: DB constraint запрещает owasp/severity вне SECURITY
+  result.items = result.items.map((item) =>
+    item.type === "SECURITY"
+      ? item
+      : { ...item, owaspCategory: undefined, severity: undefined },
+  );
+
+  return result;
 };

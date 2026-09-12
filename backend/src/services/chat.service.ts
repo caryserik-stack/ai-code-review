@@ -1,15 +1,17 @@
-// backend/src/services/chat.service.ts
+import { GoogleGenAI } from "@google/genai";
 import { prisma } from "../lib/prisma";
+import { changePassword } from "./auth.service";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const CHAT_MESSAGES_PER_PAGE = 50;
+const HISTORY_CONTEXT_LIMIT = 20;
 
 export const getChatHistory = async (
   reviewId: string,
   userId: string,
   cursor?: string,
 ) => {
-  // Проверяем, что ревью принадлежит пользователю — тот же паттерн
-  // авторизации, что и в toggleItemResolved
   const review = await prisma.review.findFirst({
     where: { id: reviewId, userId, deletedAt: null },
   });
@@ -22,31 +24,42 @@ export const getChatHistory = async (
     ...(cursor && { cursor: { id: cursor }, skip: 1 }),
   });
 
-  const hasMore = messages.length > CHAT_MESSAGES_PER_PAGE; 
+  const hasMore = messages.length > CHAT_MESSAGES_PER_PAGE;
   const page = hasMore ? messages.slice(0, CHAT_MESSAGES_PER_PAGE) : messages;
-
   const ordered = [...page].reverse();
-
-
   const nextCursor = hasMore ? page[page.length - 1].id : null;
 
   return { messages: ordered, hasMore, nextCursor };
 };
+const buildSystemPrompt = (review: {
+  code: string;
+  language: string;
+  items: {
+    type: string;
+    title: string;
+    description: string;
+    line: number | null;
+  }[];
+}) => `You are a helpful assistant answering questions about a code review.
 
-// Mock-генератор ответа — имитирует ответ AI, видящего весь код и issues
-// ревью. На AI-шаге заменим на реальный вызов Claude с review.code +
-// review.items в контексте system prompt.
-const generateMockReply = (userMessage: string, itemsCount: number): string => {
-  const lower = userMessage.toLowerCase();
+Code (${review.language}):
+\`\`\`${review.language}
+${review.code}
+\`\`\`
 
-  if (lower.includes("why") || lower.includes("почему")) {
-    return `This is flagged because it can lead to unexpected behavior under edge cases. Looking at the ${itemsCount} issue(s) found in this review, this pattern is one of the more impactful ones to address first.`;
-  }
-  if (lower.includes("fix") || lower.includes("исправ")) {
-    return `Based on the suggested changes in this review, I'd recommend applying the diff shown in the relevant issue card, then re-running the review to confirm the score improves.`;
-  }
-  return `I've reviewed the code and the ${itemsCount} issue(s) found. Could you clarify which specific issue or line you'd like me to explain further?`;
-};
+Issues found:
+${
+  review.items.length === 0
+    ? "(no issues found)"
+    : review.items
+        .map(
+          (i, idx) =>
+            `${idx + 1}. [${i.type}]${i.line ? ` line ${i.line}` : ""} ${i.title} — ${i.description}`,
+        )
+        .join("\n")
+}
+
+Answer concisely, reference specific issues/line numbers when relevant, stay focused on this review.`;
 
 export const sendChatMessage = async (
   reviewId: string,
@@ -55,19 +68,35 @@ export const sendChatMessage = async (
 ) => {
   const review = await prisma.review.findFirst({
     where: { id: reviewId, userId, deletedAt: null },
-    include: { items: true },
+    include: {
+      items: true,
+      chatMessages: {
+        orderBy: { createdAt: "desc" },
+        take: HISTORY_CONTEXT_LIMIT,
+      },
+    },
   });
   if (!review) throw new Error("REVIEW_NOT_FOUND");
 
-  // Сохраняем сообщение пользователя
   await prisma.chatMessage.create({
     data: { reviewId, role: "USER", content },
   });
 
-  // Имитируем задержку "размышления" AI
-  await new Promise((resolve) => setTimeout(resolve, 800));
+  // ВАЖНО: у Gemini роль ассистента называется "model", не "assistant"
+  const history = [...review.chatMessages].reverse().map((m) => ({
+    role: m.role === "USER" ? ("user" as const) : ("model" as const),
+    parts: [{ text: m.content }],
+  }));
 
-  const replyContent = generateMockReply(content, review.items.length);
+  const chat = ai.chats.create({
+    model: "gemini-3.6-flash",
+    config: { systemInstruction: buildSystemPrompt(review) },
+    history,
+  });
+
+  const response = await chat.sendMessage({ message: content });
+  const replyContent =
+    response.text ?? "Sorry, I couldn't generate a response.";
 
   const assistantMessage = await prisma.chatMessage.create({
     data: { reviewId, role: "ASSISTANT", content: replyContent },
