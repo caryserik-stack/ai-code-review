@@ -335,7 +335,7 @@ function VirtualizedIssueList({
   return (
     <div
       ref={parentRef}
-      className="overflow-y-auto pr-1 -mr-1"
+      className="overflow-y-auto"
       style={{ height: VIRTUAL_LIST_HEIGHT }}
     >
       <div

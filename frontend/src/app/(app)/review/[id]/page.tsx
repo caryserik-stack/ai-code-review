@@ -288,13 +288,11 @@ export default function ReviewPage() {
           />
         )} */}
 
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
-          <QualityGateBanner items={items} />
-        </div>
 
-        <div className="md:w-72">
-          <SeverityDonut items={items} />
-        </div>
+          <QualityGateBanner items={items} />
+
+
+          {/* <SeverityDonut items={items} /> */}
 
         <IssuesProgressBar items={items} />
 

@@ -101,6 +101,12 @@ export const analyzeCode = async (
     model: "gemini-3.6-flash", // проверь актуальное имя в aistudio.google.com — модели у Google обновляются часто
     contents: `You are an expert ${language} code reviewer. ${REVIEWER_LEVEL_PROMPT[reviewerLevel]}${rulesBlock}
 
+IMPORTANT — be exhaustive, not selective:
+- Go through the code line by line. Do NOT stop after finding 2-3 obvious issues.
+- Explicitly check each of these categories, even if some yield nothing: logic bugs, null/undefined handling, error handling, input validation, security (injection, XSS, auth, secrets), performance, resource leaks, naming/readability, dead code, missing types, edge cases (empty input, boundary values, concurrency).
+- Report EVERY issue you find, including minor style/suggestion-level ones — do not filter down to "the most important" ones.
+- If the code is short, it's fine to report only what's actually there; if it's long, expect a proportionally longer list.
+
 Rules:
 - "line" is the 1-indexed line number in the code below.
 - Set "owaspCategory" and "severity" ONLY when type is "SECURITY" — omit for every other type.
@@ -114,6 +120,10 @@ ${code}
     config: {
       responseMimeType: "application/json",
       responseSchema: REVIEW_SCHEMA,
+      maxOutputTokens: 8192,
+      thinkingConfig: {
+        thinkingBudget: 2048,
+      },
     },
   });
 
