@@ -85,7 +85,11 @@ export const register = async (input: RegisterInput) => {
     data: { codeHash: hashCode(code), userId: user.id, expiresAt },
   });
 
-  await sendVerificationEmail(email, code);
+  try {
+    await sendVerificationEmail(email, code);
+  } catch (err) {
+    console.error("[register] failed to send verification email:", err);
+  }
 
   // 4. Создаём токен
   const token = createToken(user.id, user.email);
