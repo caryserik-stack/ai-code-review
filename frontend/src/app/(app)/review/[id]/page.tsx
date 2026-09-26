@@ -22,6 +22,7 @@ import { IssueFilterBar } from "@/components/review/IssueFilterBar";
 import { AnimatedProgressBar } from "@/components/review/AnimatedProgressBar";
 import { ReviewStatsGrid } from "@/components/review/ReviewStatsGrid";
 import { SeverityDonut } from "@/components/review/SeverityDonut";
+import { ServerResponse } from "http";
 
 export default function ReviewPage() {
   const params = useParams();
@@ -40,6 +41,8 @@ export default function ReviewPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+
+  const [retrying, setRetrying] = useState(false);
 
   const { filter, setFilter, search, setSearch, sortBy, setSortBy, filtered } =
     useIssueFilter(items);
@@ -66,6 +69,21 @@ export default function ReviewPage() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+
+  const handleRetry = useCallback(async () => {
+    if (!review) return;
+    setRetrying(true);
+
+    try {
+      const data = await reviewApi.retry(review.id);
+      setReview(data.review);
+      cacheReview(data.review);
+    } catch {
+      toast.error("Failed to retry review");
+    } finally {
+      setRetrying(false);
+    }
+  }, [review, setReview, cacheReview]);
 
   const handleDownloadMarkdown = useCallback(async () => {
     if (!review) return;
@@ -216,12 +234,13 @@ export default function ReviewPage() {
             {review.failureReason}
           </p>
         )}
-        <Link
-          href="/review/new"
-          className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+        <button
+          onClick={handleRetry}
+          disabled={retrying}
+          className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
-          Try again
-        </Link>
+          {retrying ? "Retrying..." : "Try again"}
+        </button>
       </div>
     );
   }
@@ -288,11 +307,9 @@ export default function ReviewPage() {
           />
         )} */}
 
+        <QualityGateBanner items={items} />
 
-          <QualityGateBanner items={items} />
-
-
-          {/* <SeverityDonut items={items} /> */}
+        {/* <SeverityDonut items={items} /> */}
 
         <IssuesProgressBar items={items} />
 

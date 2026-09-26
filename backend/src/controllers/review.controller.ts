@@ -45,6 +45,27 @@ export const createReview = async (
   }
 };
 
+export const retryReview = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const review = await reviewService.retryReview(id, req.userId!);
+    res.status(200).json({ review });
+  } catch (error: any) {
+    if (error.message === "REVIEW_NOT_FOUND") {
+      res.status(404).json({ error: "Review not found" });
+      return;
+    }
+    if (error.message === "REVIEW_NOT_FAILED") {
+      res.status(400).json({ error: "Only failed reviews can be retried" });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const getReviews = async (
   req: AuthRequest,
   res: Response,

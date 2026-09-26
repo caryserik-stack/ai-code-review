@@ -16,6 +16,7 @@ export const getReviewUsage = async (userId: string) => {
     where: {
       userId,
       createdAt: { gte: windowStart },
+      status: { not: "FAILED" },
     },
   });
   return {
@@ -53,6 +54,28 @@ export const enqueueReview = async (data: {
   await reviewQueue.add("analyze", { reviewId: review.id });
 
   return review;
+};
+
+export const retryReview = async (id: string, userId: string) => {
+  const review = await prisma.review.findFirst({
+    where: { id, userId, deletedAt: null },
+  });
+
+  if (!review) throw new Error("REVIEW_NOT_FOUND");
+  if (review.status !== "FAILED") throw new Error("REVIEW_NOT_FAILED");
+
+  const updated = await prisma.review.update({
+    where: { id },
+    data: {
+      status: "PROCESSING",
+      failureReason: null,
+      processingStartedAt: new Date(),
+    },
+  });
+
+  await reviewQueue.add("analyze", { reviewId: id });
+
+  return updated;
 };
 
 // ──────────────────────

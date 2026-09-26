@@ -115,6 +115,8 @@ export const reviewApi = {
     return responseData;
   },
 
+  retry: (id: string) => request(`/reviews/${id}/retry`, { method: "POST"}),
+
   getAll: (cursor?: string) =>
     request(cursor ? `/reviews?cursor=${cursor}` : "/reviews"),
 
